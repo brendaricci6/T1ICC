@@ -14,6 +14,7 @@ static inline real_t generateRandomB( unsigned int k );
  * @param i,j coordenadas do elemento a ser calculado (0<=i,j<n)
  * @param k numero de diagonais da matriz A
  */
+ //prosso alterar isso para gerar uma matriz com diagonal principal forte?
 static inline real_t generateRandomA( unsigned int i, unsigned int j, unsigned int k )
 {
   static real_t invRandMax = 1.0 / (real_t)RAND_MAX;
@@ -99,9 +100,21 @@ void imprimeSistema(int n, real_t **A, real_t *B) {
 
 
 
-/* Cria matriz 'A' k-diagonal e Termos independentes B */
-void criaKDiagonal(int n, int k, real_t*A, real_t **B){
-
+void criaKDiagonal(int n, int k, real_t ***A, real_t **B) {
+    //preenche a matriz
+    int d = (k - 1) / 2;
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            if (abs(i - j) <= d) {
+                (*A)[i][j] = generateRandomA(i, j, k);
+            }
+        }
+    }
+    
+    //preenche o vetor
+    for (int i = 0; i < n; ++i) {
+        (*B)[i] = generateRandomB(k);
+    }
 }
 
 /* Gera matriz simetrica positiva */

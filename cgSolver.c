@@ -54,17 +54,18 @@ int main() {
         return 1;
     }
 
-    imprimeSistema(n, matrizA, vetorB);
-    //if (!preencheMatrizKDiagonal_Aleatoria(n, k, matrizA)) {
-    //    liberaMatriz(n, matrizA);
-    //    liberaVetor(vetorB);
-    //    return 1;
-    //}
-
+    //imprimeSistema(n, matrizA, vetorB);
+    //implementar criaKDiagonal e chamr aqui 
     //gerar o sistema linear inicial (usando criaKDiagonal) 
+    criaKDiagonal(n, k, &matrizA, &vetorB);
+ 
+
+    printf("Matriz criada\n\n"); 
+
+    imprimeSistema(n, matrizA, vetorB);
+
     //gerar o pré condionador (usando gera LU e leraPreCond)
 
-    //implementar criaKDiagonal e chamr aqui 
 
 
     return 0; 
