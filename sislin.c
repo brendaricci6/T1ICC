@@ -30,16 +30,82 @@ static inline real_t generateRandomB( unsigned int k )
   return (real_t)(k<<2) * (real_t)random() * invRandMax;
 }
 
+//função de alocação da matriz principal A
+int alocaKDiagonal(int n, real_t ***matriz) {
+    //aloca o ponteiro para as linhas
+    *matriz = (real_t **)malloc(n * sizeof(real_t *));
+    if (*matriz == NULL) {
+        fprintf(stderr, "ERRO: Falha ao alocar memória para as linhas da matriz.\n");
+        return 0; //retorna falha
+    }
+
+    //aloca as colunas
+    for (int i = 0; i < n; ++i) {
+        //calloc inicializado elementos com 0.0
+        (*matriz)[i] = (real_t *)calloc(n, sizeof(real_t));
+        if ((*matriz)[i] == NULL) {
+            fprintf(stderr, "ERRO: Falha ao alocar memória para as colunas na linha %d.\n", i);
+            //se falhar libera tudo que já foi alocado
+            for (int j = 0; j < i; ++j) {
+                free((*matriz)[j]);
+            }
+            free(*matriz);
+            *matriz = NULL;
+            return 0; //retorna falha
+        }
+    }
+    return 1; //
+}
+
+int alocaVetorB(int n, real_t **vetor) {
+    *vetor = (real_t *)malloc(n * sizeof(real_t));
+    if (*vetor == NULL) {
+        fprintf(stderr, "ERRO: Falha ao alocar memória para o vetor.\n");
+        return 0; //falha
+    }
+    return 1; //sucesso    
+}
+
+//libera memória da matriz kdiagonal
+void liberaKDiagonal(int n, real_t **matriz) {
+    if (matriz == NULL) return;
+    for (int i = 0; i < n; ++i) {
+        free(matriz[i]);
+    }
+    free(matriz);
+}
+
+//libera memoria do vetor B 
+void liberaVetorB(real_t *vetor) {
+    if (vetor == NULL) return;
+    free(vetor);
+}
+
+//imprimei o destema linear
+void imprimeSistema(int n, real_t **A, real_t *B) {
+    printf("--- Matriz A ---\n");
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            printf("%5.1f ", A[i][j]);
+        }
+        printf("\n");
+    }
+
+    printf("\n--- Vetor B ---\n");
+    for (int i = 0; i < n; ++i) {
+        printf("%5.1f\n", B[i]);
+    }
+}
+
+
 
 /* Cria matriz 'A' k-diagonal e Termos independentes B */
-void criaKDiagonal(int n, int k, real_t **A, real_t **B)
-{
-  
+void criaKDiagonal(int n, int k, real_t*A, real_t **B){
+
 }
 
 /* Gera matriz simetrica positiva */
-void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, 
-			  real_t **ASP, real_t *bsp, rtime_t *tempo)
+void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t **ASP, real_t **bsp, real_t *tempo)
 {
   *tempo = timestamp();
 
@@ -82,5 +148,6 @@ real_t calcResiduoSL (real_t *A, real_t *b, real_t *X,
 
   *tempo = timestamp() - *tempo;
 }
+
 
 

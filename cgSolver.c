@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "sislin.h"
 
 int main() {
     int n;      //demenção do SL >10 
@@ -38,7 +39,28 @@ int main() {
     printf("---------------------\n");
     
     //chamar funções de sislin.c para: 
-    //alorpar memória para a matriz A e o vetor b 
+    //alorcar memória para a matriz A e o vetor b  
+
+    real_t **matrizA = NULL;
+    real_t *vetorB = NULL;
+
+    printf("Criando um sistema aleatório %dx%d com uma matriz %d-diagonal.\n\n", n, n, k);
+
+    if (!alocaKDiagonal(n, &matrizA)) {
+        return 1;
+    }
+    if (!alocaVetorB(n, &vetorB)) {
+        liberaKDiagonal(n, matrizA);
+        return 1;
+    }
+
+    imprimeSistema(n, matrizA, vetorB);
+    //if (!preencheMatrizKDiagonal_Aleatoria(n, k, matrizA)) {
+    //    liberaMatriz(n, matrizA);
+    //    liberaVetor(vetorB);
+    //    return 1;
+    //}
+
     //gerar o sistema linear inicial (usando criaKDiagonal) 
     //gerar o pré condionador (usando gera LU e leraPreCond)
 

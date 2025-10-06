@@ -16,7 +16,7 @@ DISTDIR = login1-login2
 
 .PHONY: clean purge dist all
 
-%.o: %.c %.h utils.h
+%.o: %.c %.h utils.h sislin.h 
 	$(CC) -c $(CFLAGS) $<
 
 $(PROG):  $(OBJS)
