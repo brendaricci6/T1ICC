@@ -1,6 +1,6 @@
+#include "sislin.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "sislin.h"
 
 int main() {
     int n;      //demenção do SL >10 

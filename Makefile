@@ -4,9 +4,7 @@
     LFLAGS = -lm
 
       PROG = cgSolver
-      MODULES = utils \
-	        pcgc \
-                $(PROG)
+      MODULES = utils pcgc sislin $(PROG)
       OBJS = $(addsuffix .o,$(MODULES))
       SRCS = $(addsuffix .c,$(MODULES)) $(addsuffix .h,$(MODULES))
 
@@ -16,7 +14,7 @@ DISTDIR = login1-login2
 
 .PHONY: clean purge dist all
 
-%.o: %.c %.h utils.h sislin.h 
+%.o: %.c %.h
 	$(CC) -c $(CFLAGS) $<
 
 $(PROG):  $(OBJS)
