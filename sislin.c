@@ -122,6 +122,32 @@ void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t **ASP, real
 {
   *tempo = timestamp();
 
+  
+    // Converte ponteiro linear (A) para acesso 2D
+    real_t **Amat = (real_t **)malloc(n * sizeof(real_t *));
+    for (int i = 0; i < n; i++)
+        Amat[i] = &A[i * n];
+
+    // Calcula A_SP = At * A  (matriz simétrica definida positiva)
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            ASP[i][j] = 0.0;
+            for (int k2 = 0; k2 < n; k2++) {
+                ASP[i][j] += Amat[k2][i] * Amat[k2][j];
+            }
+        }
+    }
+
+    // Calcula b_SP = Aᵗ * b
+    for (int i = 0; i < n; i++) {
+        (*bsp)[i] = 0.0;
+        for (int k2 = 0; k2 < n; k2++) {
+            (*bsp)[i] += Amat[k2][i] * b[k2];
+        }
+    }
+
+    free(Amat);
+
   *tempo = timestamp() - *tempo;
  
 }
@@ -132,6 +158,33 @@ void geraDLU (real_t *A, int n, int k,
 {
   *tempo = timestamp();
 
+    // Aloca vetores
+    *D = (real_t *) malloc(n * sizeof(real_t));
+    *L = (real_t *) malloc(n * sizeof(real_t));
+    *U = (real_t *) malloc(n * sizeof(real_t));
+
+    // Inicializa com zero
+    for (int i = 0; i < n; i++) {
+        (*L)[i] = 0.0;
+        (*D)[i] = 0.0;
+        (*U)[i] = 0.0;
+    }
+
+    // Preenche D, L e U a partir de A tridiagonal compacta
+    for (int i = 0; i < n; i++) {
+        int base = i * k;
+
+        // Subdiagonal (L)
+        if (i > 0)
+            (*L)[i] = A[base + 0];
+
+        // Diagonal principal (D)
+        (*D)[i] = A[base + 1];
+
+        // Superdiagonal (U)
+        if (i < n - 1)
+            (*U)[i] = A[base + 2];
+    }
 
   *tempo = timestamp() - *tempo;
 }
@@ -146,6 +199,27 @@ void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k,
   *tempo = timestamp();
 
 
+    // Aloca M (matriz densa n x n)
+    *M = (real_t *) calloc(n * n, sizeof(real_t));
+    if (*M == NULL) {
+        fprintf(stderr, "ERRO: Falha ao alocar memória para M.\n");
+        exit(1);
+    }
+
+    // Preenche M usando fórmula do pré-condicionador
+    for (int i = 0; i < n; i++) {
+        // diagonal principal
+        (*M)[i*n + i] = (D[i] + w * L[i]) / D[i] * (D[i] + w * U[i]);
+
+        // subdiagonal
+        if (i > 0)
+            (*M)[i*n + (i-1)] = (D[i] + w * L[i]) / D[i] * (w * U[i-1]);
+
+        // superdiagonal
+        if (i < n - 1)
+            (*M)[i*n + (i+1)] = (w * L[i+1]) * (D[i] + w * U[i]) / D[i];
+    }
+
   *tempo = timestamp() - *tempo;
 }
 
@@ -153,13 +227,34 @@ void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k,
 real_t calcResiduoSL (real_t *A, real_t *b, real_t *X,
 		      int n, int k, rtime_t *tempo)
 {
-  *tempo = timestamp();
+    *tempo = timestamp();
 
-  real_t *r = calloc(n, sizeof(real_t));
+    // Aloca vetor r
+    real_t *r = calloc(n, sizeof(real_t));
+    if (r == NULL) {
+        fprintf(stderr, "ERRO: Falha ao alocar memória para o resíduo.\n");
+        exit(1);
+    }
 
-  
+    // Calcula r = b - A*X
+    for (int i = 0; i < n; i++) {
+        r[i] = b[i];
+        for (int j = 0; j < n; j++) {
+            r[i] -= A[i*n + j] * X[j];
+        }
+    }
 
-  *tempo = timestamp() - *tempo;
+    // Calcula norma L2 do resíduo
+    real_t norma = 0.0;
+    for (int i = 0; i < n; i++) {
+        norma += r[i] * r[i];
+    }
+    norma = sqrt(norma);
+
+    free(r);
+
+    *tempo = timestamp() - *tempo;
+    return norma;
 }
 
 
