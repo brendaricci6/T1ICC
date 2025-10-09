@@ -59,7 +59,7 @@ int main() {
     // Gerando sistema Linear
     printf("Gerando sistema tridiagonal simétrico positivo...\n");
     rtime_t t_total = timestamp();
-    criaKDiagonal(matrizA, vetorB, n, k);
+    criaKDiagonal(n, k, &matrizA, &vetorB);
     t_total = timestamp() - t_total;
     printf("Sistema gerado em %.6lfs.\n\n", t_total);
 
