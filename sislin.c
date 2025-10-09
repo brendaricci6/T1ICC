@@ -158,33 +158,46 @@ void geraDLU (real_t *A, int n, int k,
 {
   *tempo = timestamp();
 
-    // Aloca vetores
+    // --- Aloca vetores ---
     *D = (real_t *) malloc(n * sizeof(real_t));
-    *L = (real_t *) malloc(n * sizeof(real_t));
-    *U = (real_t *) malloc(n * sizeof(real_t));
+    *L = (real_t *) malloc((n - 1) * sizeof(real_t));
+    *U = (real_t *) malloc((n - 1) * sizeof(real_t));
 
-    // Inicializa com zero
+    if (!(*D) || !(*L) || !(*U)) {
+        fprintf(stderr, "Erro: falha ao alocar D, L ou U em geraDLU().\n");
+        return;
+    }
+
+    // --- Inicializa com zeros ---
     for (int i = 0; i < n; i++) {
-        (*L)[i] = 0.0;
         (*D)[i] = 0.0;
+    }
+    
+    for (int i = 0; i < n - 1; i++) {
+        (*L)[i] = 0.0;
         (*U)[i] = 0.0;
     }
 
-    // Preenche D, L e U a partir de A tridiagonal compacta
+    // --- Preenche D, L e U ---
+    // Considerando o formato compactado: cada linha i tem k elementos
+    // com a diagonal principal no meio: offset = k/2
+    int offset = k / 2;
+
     for (int i = 0; i < n; i++) {
         int base = i * k;
 
-        // Subdiagonal (L)
+        // Diagonal principal
+        (*D)[i] = A[base + offset];
+
+        // Subdiagonal (elemento logo abaixo da diagonal principal)
         if (i > 0)
-            (*L)[i] = A[base + 0];
+            (*L)[i - 1] = A[base + offset - 1];
 
-        // Diagonal principal (D)
-        (*D)[i] = A[base + 1];
-
-        // Superdiagonal (U)
+        // Superdiagonal (elemento logo acima da diagonal principal)
         if (i < n - 1)
-            (*U)[i] = A[base + 2];
+            (*U)[i] = A[base + offset + 1];
     }
+
 
   *tempo = timestamp() - *tempo;
 }

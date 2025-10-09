@@ -1,4 +1,5 @@
 #include "sislin.h"
+#include "pcgc.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -43,6 +44,7 @@ int main() {
 
     real_t **matrizA = NULL;
     real_t *vetorB = NULL;
+    real_t *x = calloc(n, sizeof(real_t));
 
     printf("Criando um sistema aleatório %dx%d com uma matriz %d-diagonal.\n\n", n, n, k);
 
@@ -54,18 +56,48 @@ int main() {
         return 1;
     }
 
-    //imprimeSistema(n, matrizA, vetorB);
-    //implementar criaKDiagonal e chamr aqui 
-    //gerar o sistema linear inicial (usando criaKDiagonal) 
-    criaKDiagonal(n, k, &matrizA, &vetorB);
- 
+    // Gerando sistema Linear
+    printf("Gerando sistema tridiagonal simétrico positivo...\n");
+    rtime_t t_total = timestamp();
+    criaKDiagonal(matrizA, vetorB, n, k);
+    t_total = timestamp() - t_total;
+    printf("Sistema gerado em %.6lfs.\n\n", t_total);
 
-    printf("Matriz criada\n\n"); 
 
-    imprimeSistema(n, matrizA, vetorB);
+    // Decomposicao DLU
+    real_t *D;
+    real_t *L;
+    real_t *U;
+    rtime_t tDLU;
 
-    //gerar o pré condionador (usando gera LU e leraPreCond)
+    geraDLU(matrizA, n, k, &D, &L, &U, &tDLU);
+    printf("Decomposição DLU gerada em %.6lfs.\n", tDLU);
 
+
+    // Gerando Pre-Condicionador
+    real_t *matrizPreCond;
+    rtime_t tPrecond;
+    geraPreCond(D, L, U, omega, n, k, &matrizPreCond, &tPrecond);
+    printf("Pré-condicionador gerado em %.6lfs.\n", tPrecond);
+
+    // Gradientes Conjugados
+    printf("\nExecutando método de Gradientes Conjugados...\n");
+    int iter = 0;
+    real_t residuo = 0.0;
+
+    rtime_t tCG = timestamp();
+    // função a ser implementada
+    iter = conjugateGradient(matrizA, vetorB, x, n, k, epsilon, maxit, &residuo, matrizPreCond);  
+    tCG = timestamp() - tCG;
+
+    printf("Gradientes Conjugados concluído em %.6lfs (%d iterações)\n", tCG, iter);
+    printf("Resíduo final estimado: %.6e\n", residuo);
+
+    // Residuo
+
+    rtime_t tResiduo;
+    real_t rnorm = calcResiduoSL(matrizA, vetorB, x, n, k, &tResiduo);
+    printf("Norma do resíduo calculada em %.6lfs: %.6e\n", tResiduo, rnorm);
 
 
     return 0; 
