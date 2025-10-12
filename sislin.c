@@ -100,56 +100,59 @@ void imprimeSistema(int n, real_t **A, real_t *B) {
 
 
 
-void criaKDiagonal(int n, int k, real_t ***A, real_t **B) {
+void criaKDiagonal(int n, int k, real_t *A, real_t *B) {
     //preenche a matriz
     int d = (k - 1) / 2;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
             if (abs(i - j) <= d) {
-                (*A)[i][j] = generateRandomA(i, j, k);
+                // Correct way to access element (i, j) in a 1D array
+                A[i * n + j] = generateRandomA(i, j, k);
+            }
+            // Optional: Initialize non-diagonal elements to 0
+            else {
+                A[i * n + j] = 0.0;
             }
         }
     }
     
     //preenche o vetor
     for (int i = 0; i < n; ++i) {
-        (*B)[i] = generateRandomB(k);
+        // Correct way to access element i in a 1D array
+        B[i] = generateRandomB(k);
     }
 }
 
 /* Gera matriz simetrica positiva */
-void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t **ASP, real_t **bsp, real_t *tempo)
+void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_t *bsp, real_t *tempo)
 {
-  *tempo = timestamp();
+ *tempo = timestamp();
 
-  
-    // Converte ponteiro linear (A) para acesso 2D
-    real_t **Amat = (real_t **)malloc(n * sizeof(real_t *));
-    for (int i = 0; i < n; i++)
-        Amat[i] = &A[i * n];
-
-    // Calcula A_SP = At * A  (matriz simétrica definida positiva)
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            ASP[i][j] = 0.0;
-            for (int k2 = 0; k2 < n; k2++) {
-                ASP[i][j] += Amat[k2][i] * Amat[k2][j];
+    // Calcula A' = Aᵗ * A
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            real_t soma = 0.0;
+            // Produto escalar da coluna 'i' de A pela coluna 'j' de A
+            for (int k2 = 0; k2 < n; ++k2) {
+                soma += A[k2 * n + i] * A[k2 * n + j];
             }
+            // Acesso direto, sem o ponteiro extra
+            ASP[i * n + j] = soma;
         }
     }
 
-    // Calcula b_SP = Aᵗ * b
-    for (int i = 0; i < n; i++) {
-        (*bsp)[i] = 0.0;
-        for (int k2 = 0; k2 < n; k2++) {
-            (*bsp)[i] += Amat[k2][i] * b[k2];
+    // Calcula b' = Aᵗ * b
+    for (int i = 0; i < n; ++i) {
+        real_t soma = 0.0;
+        // Produto escalar da coluna 'i' de A pelo vetor b
+        for (int k2 = 0; k2 < n; ++k2) {
+            soma += A[k2 * n + i] * b[k2];
         }
+        // Acesso direto
+        bsp[i] = soma;
     }
 
-    free(Amat);
-
-  *tempo = timestamp() - *tempo;
- 
+    *tempo = timestamp() - *tempo; 
 }
 
 
@@ -240,33 +243,32 @@ void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k,
 real_t calcResiduoSL (real_t *A, real_t *b, real_t *X,
 		      int n, int k, rtime_t *tempo)
 {
-    *tempo = timestamp();
+    rtime_t t0 = timestamp();
 
-    // Aloca vetor r
-    real_t *r = calloc(n, sizeof(real_t));
-    if (r == NULL) {
-        fprintf(stderr, "ERRO: Falha ao alocar memória para o resíduo.\n");
-        exit(1);
+    real_t *r = malloc(n * sizeof(real_t));
+    if (!r) {
+        fprintf(stderr, "Erro de alocação no cálculo do resíduo.\n");
+        return -1;
     }
 
-    // Calcula r = b - A*X
-    for (int i = 0; i < n; i++) {
-        r[i] = b[i];
-        for (int j = 0; j < n; j++) {
-            r[i] -= A[i*n + j] * X[j];
+    // Calcula r = b - A*x
+    for (int i = 0; i < n; ++i) {
+        real_t Ax_i = 0.0;
+        for (int j = 0; j < n; ++j) {
+            Ax_i += A[i * n + j] * X[j];
         }
+        r[i] = b[i] - Ax_i;
     }
 
-    // Calcula norma L2 do resíduo
-    real_t norma = 0.0;
-    for (int i = 0; i < n; i++) {
-        norma += r[i] * r[i];
+    // Calcula norma euclidiana ||r||
+    real_t soma = 0.0;
+    for (int i = 0; i < n; ++i) {
+        soma += r[i] * r[i];
     }
-    norma = sqrt(norma);
+    real_t norma = sqrt(soma);
 
     free(r);
-
-    *tempo = timestamp() - *tempo;
+    *tempo = timestamp() - t0;
     return norma;
 }
 
