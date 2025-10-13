@@ -157,52 +157,47 @@ void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_
 
 
 void geraDLU (real_t *A, int n, int k,
-	      real_t **D, real_t **L, real_t **U, rtime_t *tempo)
+              real_t **D, real_t **L, real_t **U, rtime_t *tempo)
 {
-  *tempo = timestamp();
+    *tempo = timestamp();
 
-    // --- Aloca vetores ---
+    /* aloca */
     *D = (real_t *) malloc(n * sizeof(real_t));
-    *L = (real_t *) malloc((n - 1) * sizeof(real_t));
-    *U = (real_t *) malloc((n - 1) * sizeof(real_t));
+    *L = (real_t *) malloc((n > 1 ? (n - 1) : 0) * sizeof(real_t));
+    *U = (real_t *) malloc((n > 1 ? (n - 1) : 0) * sizeof(real_t));
 
-    if (!(*D) || !(*L) || !(*U)) {
-        fprintf(stderr, "Erro: falha ao alocar D, L ou U em geraDLU().\n");
+    if (!(*D) || (n>1 && (!(*L) || !(*U)))) {
+        fprintf(stderr, "Erro: falha ao alocar D/L/U em geraDLU().\n");
+        if (*D) free(*D);
+        if (*L) free(*L);
+        if (*U) free(*U);
+        *D = *L = *U = NULL;
+        *tempo = timestamp() - *tempo;
         return;
     }
 
-    // --- Inicializa com zeros ---
-    for (int i = 0; i < n; i++) {
-        (*D)[i] = 0.0;
+    /* preenche */
+    for (int i = 0; i < n; ++i) {
+        (*D)[i] = A[i * n + i];
     }
-    
-    for (int i = 0; i < n - 1; i++) {
-        (*L)[i] = 0.0;
-        (*U)[i] = 0.0;
-    }
-
-    // --- Preenche D, L e U ---
-    // Considerando o formato compactado: cada linha i tem k elementos
-    // com a diagonal principal no meio: offset = k/2
-    int offset = k / 2;
-
-    for (int i = 0; i < n; i++) {
-        int base = i * k;
-
-        // Diagonal principal
-        (*D)[i] = A[base + offset];
-
-        // Subdiagonal (elemento logo abaixo da diagonal principal)
-        if (i > 0)
-            (*L)[i - 1] = A[base + offset - 1];
-
-        // Superdiagonal (elemento logo acima da diagonal principal)
-        if (i < n - 1)
-            (*U)[i] = A[base + offset + 1];
+    for (int i = 0; i < n - 1; ++i) {
+        /* subdiagonal L: A[(i+1), i] */
+        (*L)[i] = A[(i + 1) * n + i];
+        /* superdiagonal U: A[i, i+1] */
+        (*U)[i] = A[i * n + (i + 1)];
     }
 
+    /* proteção: se alguma diagonal for zero ou muito pequena, aumente para epsilon */
+    const real_t eps_diag = 1e-12;
+    for (int i = 0; i < n; ++i) {
+        if (fabs((*D)[i]) < eps_diag) {
+            /* aviso e correção */
+            // fprintf(stderr, "Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, (*D)[i], eps_diag);
+            (*D)[i] = eps_diag;
+        }
+    }
 
-  *tempo = timestamp() - *tempo;
+    *tempo = timestamp() - *tempo;
 }
 
 /**
@@ -210,33 +205,45 @@ void geraDLU (real_t *A, int n, int k,
  *
  */
 void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k,
-		 real_t **M, rtime_t *tempo)
+                 real_t **M, rtime_t *tempo)
 {
-  *tempo = timestamp();
+    *tempo = timestamp();
 
-
-    // Aloca M (matriz densa n x n)
-    *M = (real_t *) calloc(n * n, sizeof(real_t));
-    if (*M == NULL) {
-        fprintf(stderr, "ERRO: Falha ao alocar memória para M.\n");
-        exit(1);
+    if (w == -1.0) {
+        /* sem pré-condicionador */
+        *M = NULL;
+        *tempo = timestamp() - *tempo;
+        return;
     }
 
-    // Preenche M usando fórmula do pré-condicionador
-    for (int i = 0; i < n; i++) {
-        // diagonal principal
-        (*M)[i*n + i] = (D[i] + w * L[i]) / D[i] * (D[i] + w * U[i]);
-
-        // subdiagonal
-        if (i > 0)
-            (*M)[i*n + (i-1)] = (D[i] + w * L[i]) / D[i] * (w * U[i-1]);
-
-        // superdiagonal
-        if (i < n - 1)
-            (*M)[i*n + (i+1)] = (w * L[i+1]) * (D[i] + w * U[i]) / D[i];
+    if (w == 0.0) {
+        /* Jacobi: devolve vetor diagonal D (com proteção numérica) */
+        *M = (real_t *) malloc(n * sizeof(real_t));
+        if (!(*M)) {
+            fprintf(stderr, "ERRO: falha ao alocar M em geraPreCond()\n");
+            *M = NULL;
+            *tempo = timestamp() - *tempo;
+            return;
+        }
+        const real_t eps_diag = 1e-12;
+        for (int i = 0; i < n; ++i) {
+            real_t val = D[i];
+            if (fabs(val) < eps_diag) {
+                // evitar divisão por zero no precond
+                // fprintf(stderr, "Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, val, eps_diag);
+                val = eps_diag;
+            }
+            (*M)[i] = val;
+        }
+        *tempo = timestamp() - *tempo;
+        return;
     }
 
-  *tempo = timestamp() - *tempo;
+    /* Se chegou aqui: Gauss-Seidel / SSOR não implementados (opção BÔNUS) */
+    fprintf(stderr, "Aviso: pré-condicionador com w=%.6g não implementado (use -1 ou 0.0).\n", (double)w);
+    *M = NULL;
+    *tempo = timestamp() - *tempo;
+    return;
 }
 
 

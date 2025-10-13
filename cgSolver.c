@@ -11,7 +11,9 @@ int main() {
     double epsilon; //erro aprox absoluto máximo
     rtime_t t_pc, t_iter_total, t_iter_medio, t_residuo;
     real_t norma_erro, norma_residuo;
-
+    
+    srandom(20252);
+    
     //leitura dos valores 
     int items_read = scanf("%d %d %lf %d %lf", &n, &k, &omega, &maxit, &epsilon);
 
@@ -118,7 +120,8 @@ int main() {
 
     rtime_t tCG = timestamp();
     // função a ser implementada
-    iter = conjugateGradient(ASP, bsp, x, n, k, epsilon, maxit, &residuo, matrizPreCond);  
+    iter = conjugateGradient(ASP, bsp, x, n, k, epsilon, maxit, &residuo, matrizPreCond, &norma_erro);
+ 
     tCG = timestamp() - tCG;
 
     printf("Gradientes Conjugados concluído em %.6lfs (%d iterações)\n", tCG, iter);
