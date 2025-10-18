@@ -26,7 +26,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
 
     // --- Passo 2: aplicar pré-condicionador M (Jacobi) ---
     for (int i = 0; i < n; i++) {
-        if (M != NULL && ABS(M[i]) > 1e-12)
+        if (M != NULL && ABS(M[i]) > eps)
             z[i] = r[i] / M[i];
         else
             z[i] = r[i]; // sem pré-condicionador
@@ -56,7 +56,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         for (int i = 0; i < n; i++)
             pAp += p[i] * Ap[i];
 
-        if (ABS(pAp) < 1e-12) {
+        if (ABS(pAp) < eps) {
             fprintf(stderr, "Erro numérico: p^T A p = 0.\n");
             break;
         }
@@ -78,14 +78,18 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         norma_r = sqrt(norma_r);
 
         if (norma_r < eps) {
+            *normaFinal = norma_r;
             printf("Convergiu em %d iterações. ||r|| = %.6e\n", iter, norma_r);
-            free(r); free(z); free(p); free(Ap);
+            free(r); 
+            free(z); 
+            free(p); 
+            free(Ap);
             return iter;
         }
 
         // --- aplicar pré-condicionador: z = M^{-1} * r ---
         for (int i = 0; i < n; i++) {
-            if (M != NULL && abs(M[i]) > 1e-12)
+            if (M != NULL && abs(M[i]) > eps)
                 z[i] = r[i] / M[i];
             else
                 z[i] = r[i];
@@ -105,6 +109,9 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
     }
 
     printf("Aviso: não convergiu após %d iterações.\n", maxit);
-    free(r); free(z); free(p); free(Ap);
+    free(r); 
+    free(z); 
+    free(p); 
+    free(Ap);
     return maxit;
 }

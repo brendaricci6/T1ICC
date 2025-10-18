@@ -14,7 +14,7 @@ int main() {
     //variáveis para armazenar tempos de execução
     rtime_t tDLU, tPrecond, tPCG, tResiduo;
     //variáveis para armazenar normas
-    real_t norma_erro = 0.0, norma_residuo = 0.0;
+    real_t normaFinal = 0.0, norma_residuo = 0.0;
 
     // -------------------- Leitura da entrada --------------------
 
@@ -134,7 +134,7 @@ int main() {
     //maxit: max. iterações
     //epsilon: tolerância
     //M: pré-condicionador
-    iter = gradienteConjugado(A, b, x, n, maxit, epsilon, M);
+    iter = gradienteConjugado(A, b, x, n, maxit, epsilon, M, &normaFinal);
     
     //calcula tempo total da execução do pcg
     tPCG = timestamp() - tPCG;
@@ -159,7 +159,7 @@ int main() {
         printf("%.16g ", x[i]);
     printf("\n");
 
-    printf("Norma do erro: %.8e\n", norma_erro);
+    printf("Norma do erro: %.8e\n", normaFinal);
     printf("Norma do resíduo: %.8e\n", norma_residuo);
     printf("Tempo pré-cond: %.8e\n", tPrecond);
     printf("Tempo total PCG: %.8e\n", tPCG);
