@@ -1,10 +1,6 @@
 #ifndef PCGC_H
 #define PCGC_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-
 #include "utils.h"
 
 /**
@@ -25,8 +21,6 @@
  *          0 se solução inicial já é correta (r==0),
  *         -1 em caso de quebra numérica (p^T A p == 0 ou divisão por zero no pré-condicionador).
  */
-int conjugateGradient(real_t *A, real_t *b, real_t *x, int n, int k,
-                      double eps, int maxit,
-                      real_t *residuo_out, real_t *M, real_t *norma_inf_out);
+int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double eps, real_t *M);
 
 #endif

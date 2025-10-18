@@ -83,19 +83,19 @@ void liberaVetorB(real_t *vetor) {
 }
 
 //imprimei o destema linear
-void imprimeSistema(int n, real_t **A, real_t *B) {
+void imprimeSistema(int n, real_t *A, real_t *B) {
     printf("--- Matriz A ---\n");
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            printf("%5.1f ", A[i][j]);
+            printf("%5.1f ", A[i*n + j]);
         }
         printf("\n");
     }
 
-    printf("\n--- Vetor B ---\n");
-    for (int i = 0; i < n; ++i) {
-        printf("%5.1f\n", B[i]);
-    }
+    // printf("\n--- Vetor B ---\n");
+    // for (int i = 0; i < n; ++i) {
+    //     printf("%5.1f\n", B[i]);
+    // }
 }
 
 
@@ -157,43 +157,27 @@ void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_
 
 
 void geraDLU (real_t *A, int n, int k,
-              real_t **D, real_t **L, real_t **U, rtime_t *tempo)
+              real_t *D, real_t *L, real_t *U, rtime_t *tempo, double eps)
 {
     *tempo = timestamp();
 
-    /* aloca */
-    *D = (real_t *) malloc(n * sizeof(real_t));
-    *L = (real_t *) malloc((n > 1 ? (n - 1) : 0) * sizeof(real_t));
-    *U = (real_t *) malloc((n > 1 ? (n - 1) : 0) * sizeof(real_t));
-
-    if (!(*D) || (n>1 && (!(*L) || !(*U)))) {
-        fprintf(stderr, "Erro: falha ao alocar D/L/U em geraDLU().\n");
-        if (*D) free(*D);
-        if (*L) free(*L);
-        if (*U) free(*U);
-        *D = *L = *U = NULL;
-        *tempo = timestamp() - *tempo;
-        return;
-    }
-
     /* preenche */
     for (int i = 0; i < n; ++i) {
-        (*D)[i] = A[i * n + i];
+        D[i] = A[i * n + i];
     }
     for (int i = 0; i < n - 1; ++i) {
         /* subdiagonal L: A[(i+1), i] */
-        (*L)[i] = A[(i + 1) * n + i];
+        L[i] = A[(i + 1) * n + i];
         /* superdiagonal U: A[i, i+1] */
-        (*U)[i] = A[i * n + (i + 1)];
+        U[i] = A[i * n + (i + 1)];
     }
 
     /* proteção: se alguma diagonal for zero ou muito pequena, aumente para epsilon */
-    const real_t eps_diag = 1e-12;
     for (int i = 0; i < n; ++i) {
-        if (fabs((*D)[i]) < eps_diag) {
+        if (ABS(D[i]) < eps) {
             /* aviso e correção */
-            // fprintf(stderr, "Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, (*D)[i], eps_diag);
-            (*D)[i] = eps_diag;
+            // fprintf(stderr, "Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, (*D)[i], eps);
+            D[i] = eps;
         }
     }
 
@@ -204,44 +188,40 @@ void geraDLU (real_t *A, int n, int k,
  * Devolve matriz M⁻¹
  *
  */
-void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k,
-                 real_t **M, rtime_t *tempo)
+void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k, real_t *M, rtime_t *tempo, double eps)
 {
     *tempo = timestamp();
 
     if (w == -1.0) {
-        /* sem pré-condicionador */
-        *M = NULL;
         *tempo = timestamp() - *tempo;
         return;
     }
 
     if (w == 0.0) {
         /* Jacobi: devolve vetor diagonal D (com proteção numérica) */
-        *M = (real_t *) malloc(n * sizeof(real_t));
-        if (!(*M)) {
+        if (!M) {
             fprintf(stderr, "ERRO: falha ao alocar M em geraPreCond()\n");
-            *M = NULL;
+            free(M);
             *tempo = timestamp() - *tempo;
             return;
         }
-        const real_t eps_diag = 1e-12;
+
+        const real_t eps = 1e-12;
         for (int i = 0; i < n; ++i) {
             real_t val = D[i];
-            if (fabs(val) < eps_diag) {
+            if (ABS(val) < eps) {
                 // evitar divisão por zero no precond
-                // fprintf(stderr, "Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, val, eps_diag);
-                val = eps_diag;
+                // fprintf(stderr, "Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, val, eps);
+                val = eps;
             }
-            (*M)[i] = val;
+            M[i] = val;
         }
         *tempo = timestamp() - *tempo;
         return;
     }
 
-    /* Se chegou aqui: Gauss-Seidel / SSOR não implementados (opção BÔNUS) */
-    fprintf(stderr, "Aviso: pré-condicionador com w=%.6g não implementado (use -1 ou 0.0).\n", (double)w);
-    *M = NULL;
+    fprintf(stderr, "pré-condicionador com w=%lf não implementado (usar -1 ou 0.0).\n", w);
+    free(M);
     *tempo = timestamp() - *tempo;
     return;
 }

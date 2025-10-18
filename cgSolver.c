@@ -1,38 +1,35 @@
 #include "sislin.h"
 #include "pcgc.h"
+#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 int main() {
-    int n;      //demenção do SL >10 
-    int k;      //numero de diagonais da matriz >1 e impar
-    double omega; //pre-condicionador
-    int maxit;  //num máx de iterações
-    double epsilon; //erro aprox absoluto máximo
-    rtime_t t_pc, t_iter_total, t_iter_medio, t_residuo;
-    real_t norma_erro, norma_residuo;
-    
-    srandom(20252);
-    
-    //leitura dos valores 
+    int n;          // dimensão do SL >10
+    int k;          // número de diagonais da matriz >1 e ímpar
+    double omega;   // pré-condicionador
+    int maxit;      // número máx. de iterações
+    double epsilon; // erro aprox. absoluto máximo
+
+    rtime_t tDLU, tPrecond, tPCG, tResiduo;
+    real_t norma_erro = 0.0, norma_residuo = 0.0;
+
+    // -------------------- Leitura da entrada --------------------
     int items_read = scanf("%d %d %lf %d %lf", &n, &k, &omega, &maxit, &epsilon);
 
-    //verifica se todos os valores foram lidos corretamente
     if (items_read < 5) {
         fprintf(stderr, "Erro: Não foi possível ler todos os 5 valores de entrada.\n");
-        return 1; //retorna erro
+        return 1;
     }
 
-    //verifica dimensão > 10
-    if( n <= 10 ){
-        fprintf(stderr, "valor de dimensão inválido\n"); 
-        return 1; 
+    if (n <= 10) {
+        fprintf(stderr, "Erro: dimensão deve ser > 10\n");
+        return 1;
     }
 
-    //verifica diagonais > 1 e impar
-    if (( k <= 1) || (k % 2 == 0)){
-        fprintf(stderr, "valor de diagonais inválido\n"); 
-        return 1; 
+    if (k <= 1 || k % 2 == 0) {
+        fprintf(stderr, "Erro: número de diagonais inválido (deve ser ímpar > 1)\n");
+        return 1;
     }
 
     printf("\n--- Valores lidos ---\n");
@@ -42,139 +39,95 @@ int main() {
     printf("Max. Iterações (maxit): %d\n", maxit);
     printf("Tolerância (ε): %g\n", epsilon);
     printf("---------------------\n");
-    
-    //-------------------- Inicialização -----------------------
-    srandom(20252); 
 
-    //-------------------- Gera Sistema linear original -----------------------
-    real_t *matrizA = NULL;
-    real_t *vetorB = NULL;
-    real_t *x = calloc(n, sizeof(real_t)); //vetor de respostas
-
-    //printf("Criando um sistema aleatório %dx%d com uma matriz %d-diagonal.\n\n", n, n, k);
-
-    //aloca matriz e vetor
-    matrizA = malloc(n * n * sizeof(real_t));
-    if (!matrizA) {
-        fprintf(stderr, "Erro de alocação de memória para matrizA\n");
-    return 1;
-    }
-    vetorB = malloc(n * sizeof(real_t));
-    if (!vetorB) {
-        fprintf(stderr, "Erro de alocação de memória para vetorB\n");
-        free (matrizA);
-    return 1;
-    }
-
-    // Gerando sistema Linear
+    // -------------------- Geração do sistema --------------------
     printf("Gerando sistema tridiagonal simétrico positivo...\n");
-    rtime_t t_total = timestamp();
-    criaKDiagonal(n, k, matrizA, vetorB);
-    t_total = timestamp() - t_total;
-    printf("Sistema gerado em %.6lfs.\n\n", t_total);
 
-    //-------------------- tranf p sistema simétrico positivo -----------------------
-    real_t *ASP = NULL;
-    real_t *bsp = NULL;
-
-    //aloca matriz e vetor
-    ASP = malloc(n * n * sizeof(real_t));
-    if (!ASP) {
-        fprintf(stderr, "Erro de alocação de memória para ASP\n");
-    return 1;
+    real_t *A = calloc(n * n, sizeof(real_t));
+    real_t *b = malloc(n * sizeof(real_t));
+    real_t *x = calloc(n, sizeof(real_t));
+    if (!b || !x) {
+        fprintf(stderr, "Erro de alocação de memória em b ou x\n");
+        return 1;
     }
-    bsp = malloc(n * sizeof(real_t));
-    if (!bsp) {
-        fprintf(stderr, "Erro de alocação de memória para vetorB\n");
-        free (ASP);
-    return 1;
-    }
-    rtime_t algum_tempo;
-    genSimetricaPositiva(matrizA, vetorB, n, k, ASP, bsp, &algum_tempo);
+    rtime_t tGen = timestamp();
+    criaKDiagonal(n, k, A, b);
+    // imprimeSistema(n, A, b);
+    tGen = timestamp() - tGen;
+    printf("Sistema gerado em %.6es.\n\n", tGen);
 
-    free(matrizA);
-    free(vetorB);
+    // -------------------- Decomposição DLU --------------------
+    real_t *D =  malloc(n * sizeof(real_t));
+    real_t *L = malloc((n - 1) * sizeof(real_t));
+    real_t *U = malloc((n - 1) * sizeof(real_t));
+    geraDLU(A, n, k, D, L, U, &tDLU, epsilon);
+    printf("Decomposição DLU gerada em %.6es.\n", tDLU);
 
-    //-------------------- prepara pré-cond -----------------------
-    // Decomposicao DLU
-    real_t *D;
-    real_t *L;
-    real_t *U;
-    rtime_t tDLU;
+    // printf("U->");
+    // for (int i = 0; i < n; i++) 
+    //     printf(" %6e", U[i]);
+    // printf("\n");
 
-    //rtime_t t_pc = timestamp(); 
-    geraDLU(ASP, n, k, &D, &L, &U, &tDLU);
-    printf("Decomposição DLU gerada em %.6lfs.\n", tDLU);
+    // printf("D->");
+    // for (int i = 0; i < n; i++) 
+    //     printf(" %6e", D[i]);
+    // printf("\n");
 
+    // printf("L->");
+    // for (int i = 0; i < n; i++) 
+    //     printf(" %6e", L[i]);
+    // printf("\n");
 
-    // Gerando Pre-Condicionador
-    real_t *matrizPreCond;
-    rtime_t tPrecond;
-    geraPreCond(D, L, U, omega, n, k, &matrizPreCond, &tPrecond);
-    printf("Pré-condicionador gerado em %.6lfs.\n", tPrecond);
+    // -------------------- Geração do pré-condicionador --------------------
+    real_t *M = malloc(n * sizeof(real_t));
+    geraPreCond(D, L, U, omega, n, k, M, &tPrecond, epsilon);
+    printf("Pré-condicionador gerado em %.6es.\n", tPrecond);
 
-    //-------------------- sol com gradientes conjugados -----------------------
-    printf("\nExecutando método de Gradientes Conjugados...\n");
+    // printf("M->");
+    // for (int i = 0; i < n; i++) 
+    //     printf(" %6e", M[i]);
+    // printf("\n");
+    
+    // -------------------- Execução do método PCG --------------------
+    printf("\nExecutando método de Gradientes Conjugados Pré-Condicionado...\n");
+
     int iter = 0;
-    real_t residuo = 0.0;
+    real_t res_estimado = 0.0;
+    tPCG = timestamp();
+    iter = gradienteConjugado(A, b, x, n, maxit, epsilon, M);
+    tPCG = timestamp() - tPCG;
 
-    rtime_t tCG = timestamp();
-    // função a ser implementada
-    iter = conjugateGradient(ASP, bsp, x, n, k, epsilon, maxit, &residuo, matrizPreCond, &norma_erro);
- 
-    tCG = timestamp() - tCG;
+    printf("PCG concluído em %.6es (%d iterações)\n", tPCG, iter);
+    // printf("X->");
+    // for (int i = 0; i < n; i++) 
+    //     printf(" %6e", x[i]);
+    // printf("\n");
+    // -------------------- Cálculo do resíduo --------------------
+    norma_residuo = calcResiduoSL(A, b, x, n, k, &tResiduo);
+    printf("Norma do resíduo calculada em %.6es: %.6e\n", tResiduo, norma_residuo);
 
-    printf("Gradientes Conjugados concluído em %.6lfs (%d iterações)\n", tCG, iter);
-    printf("Resíduo final estimado: %.6e\n", residuo);
-
-    // Residuo
-
-    rtime_t tResiduo;
-    norma_residuo = calcResiduoSL(ASP, bsp, x, n, k, &tResiduo);
-    printf("Norma do resíduo calculada em %.6lfs: %.6e\n", tResiduo, norma_residuo);
-
-    //-------------------- impressão dos resultados -----------------------
-
-    t_pc = tPrecond;                     
-    t_iter_total = tCG;                  
-    t_iter_medio = (iter > 0) ? (tCG / iter) : 0.0; 
-    t_residuo = tResiduo; 
-
-    printf ("\n \n ################################## IMPRESSÃO DOS RESULTADOS ################################## \n \n");
-        // Imprime a dimensão do sistema
+    // -------------------- Impressão dos resultados --------------------
+    printf("\n\n############## RESULTADOS FINAIS ##############\n");
     printf("%d\n", n);
-
-    // Imprime o vetor solução 'x' com 16 dígitos de precisão [cite: 71]
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < n; ++i)
         printf("%.16g ", x[i]);
-    }
     printf("\n");
 
-    // Imprime a norma do erro, resíduo e os tempos com 8 dígitos de precisão [cite: 72]
-    
-    // norma: norma máxima do erro aproximado em x 
-    printf("%.8g\n", norma_erro);
-    
-    // residuo: A norma euclidiana do resíduo 
-    printf("%.8g\n", norma_residuo);
-    
-    // Tempo PC: tempo para calcular a matriz pré-condicionante 
-    printf("%.8g\n", t_pc);
-    
-    // Tempo iter: Tempo médio para calcular uma iteração 
-    printf("%.8g\n", t_iter_medio);
-    
-    // Tempo residuo: Tempo para calcular a norma euclidiana do resíduo 
-    printf("%.8g\n", t_residuo);
+    printf("Norma do erro: %.8e\n", norma_erro);
+    printf("Norma do resíduo: %.8e\n", norma_residuo);
+    printf("Tempo pré-cond: %.8e\n", tPrecond);
+    printf("Tempo total PCG: %.8e\n", tPCG);
+    printf("Tempo cálculo resíduo: %.8e\n", tResiduo);
+    printf("Iterações: %d\n", iter);
 
-    //-------------------- limpa as alocações -----------------------
-    free(ASP);
-    free(bsp);
+    // -------------------- Libera memória --------------------
+    free(A);
+    free(b);
     free(x);
     free(D);
     free(L);
     free(U);
-    free(matrizPreCond);
+    if (M) free(M);
 
     return 0;
 }

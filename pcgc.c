@@ -1,156 +1,121 @@
-#include "pcgc.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "utils.h"
 
-/* produto matriz-vetor aproveitando banda k-diagonal */
-static void matvec_band(const real_t *A, const real_t *v, real_t *out, int n, int k) {
-    int d = (k - 1) / 2;
-    for (int i = 0; i < n; ++i) {
-        int j0 = i - d; if (j0 < 0) j0 = 0;
-        int j1 = i + d; if (j1 > n-1) j1 = n-1;
-        real_t s = 0.0;
-        int row = i * n;
-        for (int j = j0; j <= j1; ++j) s += A[row + j] * v[j];
-        out[i] = s;
-    }
-}
-
-/* dot product */
-static real_t dot(const real_t *a, const real_t *b, int n) {
-    real_t s = 0.0;
-    for (int i = 0; i < n; ++i) s += a[i] * b[i];
-    return s;
-}
-
-/* norma L2 */
-static real_t norm2(const real_t *a, int n) {
-    return sqrt(dot(a,a,n));
-}
-
-/* norma infinito entre x e y */
-static real_t infnorm_diff(const real_t *x, const real_t *y, int n) {
-    real_t m = 0.0;
-    for (int i = 0; i < n; ++i) {
-        real_t v = fabs(x[i] - y[i]);
-        if (v > m) m = v;
-    }
-    return m;
-}
-
-/* aplica pré-condicionador M^{-1} r -> z
-   - se M == NULL => z = r
-   - se M != NULL => assumimos M é o vetor diagonal (Jacobi): z[i] = r[i] / M[i]
-*/
-static int apply_precond(const real_t *r, real_t *z, int n, const real_t *M) {
-    if (M == NULL) {
-        for (int i = 0; i < n; ++i) z[i] = r[i];
-        return 0;
-    } else {
-        for (int i = 0; i < n; ++i) {
-            if (M[i] == 0.0) return -1;
-            z[i] = r[i] / M[i];
-        }
-        return 0;
-    }
-}
-
-int conjugateGradient(real_t *A, real_t *b, real_t *x, int n, int k,
-                      double eps, int maxit,
-                      real_t *residuo_out, real_t *M, real_t *norma_inf_out)
+/**
+ * Função simples de Gradientes Conjugados Pré-condicionados (Jacobi)
+ *
+ * Resolve A*x = b
+ * Parâmetros:
+ *   A: matriz completa (n x n)
+ *   b: vetor de termos independentes
+ *   x: vetor solução (deve estar inicializado, ex: zeros)
+ *   n: tamanho do sistema
+ *   maxit: número máximo de iterações
+ *   eps: tolerância de erro (critério de parada)
+ *   M: vetor diagonal do pré-condicionador (pode ser NULL para CG puro)
+ */
+int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double eps, real_t *M)
 {
-    /* aloca vetores */
-    real_t *r = (real_t *)malloc(n * sizeof(real_t));
-    real_t *z = (real_t *)malloc(n * sizeof(real_t));
-    real_t *p = (real_t *)malloc(n * sizeof(real_t));
-    real_t *Ap = (real_t *)malloc(n * sizeof(real_t));
-    real_t *x_prev = (real_t *)malloc(n * sizeof(real_t));
-    if (!r || !z || !p || !Ap || !x_prev) {
-        fprintf(stderr, "ERROR: allocation failed in conjugateGradient\n");
-        free(r); free(z); free(p); free(Ap); free(x_prev);
+    real_t *r = malloc(n * sizeof(real_t));  // resíduo
+    real_t *z = malloc(n * sizeof(real_t));  // resíduo pré-condicionado
+    real_t *p = malloc(n * sizeof(real_t));  // direção de busca
+    real_t *Ap = malloc(n * sizeof(real_t)); // A * p
+    if (!r || !z || !p || !Ap) {
+        fprintf(stderr, "Erro: falha de alocação de memória.\n");
         return -1;
     }
 
-    /* inicializa x, x_prev */
-    for (int i = 0; i < n; ++i) { /* assumimos x já alocado; definir como zero se necessário */
-        /* se x não estiver inicializado, o caller deve ter setado calloc */
-        x_prev[i] = 0.0;
+    // --- Passo 1: calcular r = b - A*x ---
+    for (int i = 0; i < n; i++) {
+        real_t soma = 0.0;
+        for (int j = 0; j < n; j++)
+            soma += A[i*n + j] * x[j];
+        r[i] = b[i] - soma;
     }
 
-    /* r = b - A*x ; se x inicial = 0 => r = b */
-    matvec_band(A, x, Ap, n, k); /* Ap temporário */
-    for (int i = 0; i < n; ++i) r[i] = b[i] - Ap[i];
-
-    /* z = M^{-1} r */
-    if (apply_precond(r, z, n, M) != 0) {
-        fprintf(stderr, "ERROR: division by zero in preconditioner\n");
-        free(r); free(z); free(p); free(Ap); free(x_prev);
-        return -1;
+    // --- Passo 2: aplicar pré-condicionador M (Jacobi) ---
+    for (int i = 0; i < n; i++) {
+        if (M != NULL && ABS(M[i]) > 1e-12)
+            z[i] = r[i] / M[i];
+        else
+            z[i] = r[i]; // sem pré-condicionador
     }
 
-    /* p = z */
-    for (int i = 0; i < n; ++i) p[i] = z[i];
+    // --- Passo 3: inicializar direção p = z ---
+    for (int i = 0; i < n; i++)
+        p[i] = z[i];
 
-    real_t rz_old = dot(r, z, n);
-    if (rz_old == 0.0) {
-        /* solution is already zero */
-        *residuo_out = norm2(r, n);
-        *norma_inf_out = 0.0;
-        free(r); free(z); free(p); free(Ap); free(x_prev);
-        return 0;
-    }
+    // Produto escalar inicial (rᵗz)
+    real_t rz_old = 0.0;
+    for (int i = 0; i < n; i++)
+        rz_old += r[i] * z[i];
 
-    int iter = 0;
-    real_t norma_inf = 0.0;
-    for (iter = 0; iter < maxit; ++iter) {
-        /* Ap = A * p */
-        matvec_band(A, p, Ap, n, k);
-
-        real_t denom = dot(p, Ap, n);
-        if (denom == 0.0) {
-            fprintf(stderr, "ERROR: breakdown p^T A p == 0\n");
-            free(r); free(z); free(p); free(Ap); free(x_prev);
-            return -1;
-        }
-        real_t alpha = rz_old / denom;
-
-        /* x_new = x + alpha * p */
-        for (int i = 0; i < n; ++i) x[i] += alpha * p[i];
-
-        /* r = r - alpha * Ap */
-        for (int i = 0; i < n; ++i) r[i] -= alpha * Ap[i];
-
-        /* z = M^{-1} r */
-        if (apply_precond(r, z, n, M) != 0) {
-            fprintf(stderr, "ERROR: division by zero in preconditioner (iter %d)\n", iter+1);
-            free(r); free(z); free(p); free(Ap); free(x_prev);
-            return -1;
+    // --- Loop principal ---
+    for (int iter = 1; iter <= maxit; iter++) {
+        // --- Ap = A * p ---
+        for (int i = 0; i < n; i++) {
+            real_t soma = 0.0;
+            for (int j = 0; j < n; j++)
+                soma += A[i*n + j] * p[j];
+            Ap[i] = soma;
         }
 
-        real_t rz_new = dot(r, z, n);
-        real_t beta = rz_new / rz_old;
+        // --- calcular alpha ---
+        real_t pAp = 0.0;
+        for (int i = 0; i < n; i++)
+            pAp += p[i] * Ap[i];
 
-        /* p = z + beta * p */
-        for (int i = 0; i < n; ++i) p[i] = z[i] + beta * p[i];
-
-        /* norma infinita entre x e x_prev */
-        norma_inf = infnorm_diff(x, x_prev, n);
-
-        /* copia x para x_prev */
-        for (int i = 0; i < n; ++i) x_prev[i] = x[i];
-
-        rz_old = rz_new;
-
-        if (norma_inf < eps) {
-            /* convergiu */
-            iter = iter + 1; /* número de iterações efetivamente realizadas */
+        if (ABS(pAp) < 1e-12) {
+            fprintf(stderr, "Erro numérico: p^T A p = 0.\n");
             break;
         }
+
+        real_t alpha = rz_old / pAp;
+
+        // --- atualizar x = x + alpha*p ---
+        for (int i = 0; i < n; i++)
+            x[i] += alpha * p[i];
+
+        // --- atualizar r = r - alpha*Ap ---
+        for (int i = 0; i < n; i++)
+            r[i] -= alpha * Ap[i];
+
+        // --- verificar convergência: ||r|| < eps ---
+        real_t norma_r = 0.0;
+        for (int i = 0; i < n; i++)
+            norma_r += r[i] * r[i];
+        norma_r = sqrt(norma_r);
+
+        if (norma_r < eps) {
+            printf("Convergiu em %d iterações. ||r|| = %.6e\n", iter, norma_r);
+            free(r); free(z); free(p); free(Ap);
+            return iter;
+        }
+
+        // --- aplicar pré-condicionador: z = M^{-1} * r ---
+        for (int i = 0; i < n; i++) {
+            if (M != NULL && abs(M[i]) > 1e-12)
+                z[i] = r[i] / M[i];
+            else
+                z[i] = r[i];
+        }
+
+        // --- beta = (rᵗz novo) / (rᵗz antigo) ---
+        real_t rz_new = 0.0;
+        for (int i = 0; i < n; i++)
+            rz_new += r[i] * z[i];
+
+        real_t beta = rz_new / rz_old;
+        rz_old = rz_new;
+
+        // --- atualizar direção p = z + beta*p ---
+        for (int i = 0; i < n; i++)
+            p[i] = z[i] + beta * p[i];
     }
 
-    /* calcula residuo L2 final */
-    /* note: r já é residuo b - A x (mantido) */
-    real_t resid_l2 = norm2(r, n);
-    *residuo_out = resid_l2;
-    *norma_inf_out = norma_inf;
-
-    free(r); free(z); free(p); free(Ap); free(x_prev);
-    return iter;
+    printf("Aviso: não convergiu após %d iterações.\n", maxit);
+    free(r); free(z); free(p); free(Ap);
+    return maxit;
 }
