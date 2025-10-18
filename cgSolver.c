@@ -39,16 +39,16 @@ int main() {
     }
 
     //exibição dos parâmetros lidos
-    printf("\n--- Valores lidos ---\n");
-    printf("Dimensão (n): %d\n", n);
-    printf("Diagonais (k): %d\n", k);
-    printf("Pré-condicionador (ω): %f\n", omega);
-    printf("Max. Iterações (maxit): %d\n", maxit);
-    printf("Tolerância (ε): %g\n", epsilon);
-    printf("---------------------\n");
+    //printf("\n--- Valores lidos ---\n");
+    //printf("Dimensão (n): %d\n", n);
+    //printf("Diagonais (k): %d\n", k);
+    //printf("Pré-condicionador (ω): %f\n", omega);
+    //printf("Max. Iterações (maxit): %d\n", maxit);
+    //printf("Tolerância (ε): %g\n", epsilon);
+    //printf("---------------------\n");
 
     // -------------------- Geração do sistema --------------------
-    printf("Gerando sistema tridiagonal simétrico positivo...\n");
+    //printf("Gerando sistema tridiagonal simétrico positivo...\n");
 
     real_t *A = calloc(n * n, sizeof(real_t)); //aloca matriz A inicializando com 0
     real_t *b = malloc(n * sizeof(real_t)); //aloca vetor B inicializando com 0
@@ -69,7 +69,7 @@ int main() {
 
     //calcula o tempo gasto 
     tGen = timestamp() - tGen;
-    printf("Sistema gerado em %.6es.\n\n", tGen);
+    //printf("Sistema gerado em %.6es.\n\n", tGen);
 
     // -------------------- Decomposição DLU --------------------
 
@@ -84,7 +84,7 @@ int main() {
     //calcula a decomposição DLU de A
     //armazena o tempo em tDLU
     geraDLU(A, n, k, D, L, U, &tDLU, epsilon);
-    printf("Decomposição DLU gerada em %.6es.\n", tDLU);
+    //printf("Decomposição DLU gerada em %.6es.\n", tDLU);
 
     // printf("U->");
     // for (int i = 0; i < n; i++) 
@@ -109,7 +109,7 @@ int main() {
     //gera o pré-condicionador M usando D, L, U
     //o parâmetro omega e armazena o tempo em tPrecond
     geraPreCond(D, L, U, omega, n, k, M, &tPrecond, epsilon);
-    printf("Pré-condicionador gerado em %.6es.\n", tPrecond);
+    //printf("Pré-condicionador gerado em %.6es.\n", tPrecond);
 
     // printf("M->");
     // for (int i = 0; i < n; i++) 
@@ -117,7 +117,7 @@ int main() {
     // printf("\n");
     
     // -------------------- Execução do método PCG --------------------
-    printf("\nExecutando método de Gradientes Conjugados Pré-Condicionado...\n");
+    //printf("\nExecutando método de Gradientes Conjugados Pré-Condicionado...\n");
 
     //iterações 
     int iter = 0;
@@ -138,7 +138,7 @@ int main() {
     
     //calcula tempo total da execução do pcg
     tPCG = timestamp() - tPCG;
-    printf("PCG concluído em %.6es (%d iterações)\n", tPCG, iter);
+    //printf("PCG concluído em %.6es (%d iterações)\n", tPCG, iter);
 
     // printf("X->");
     // for (int i = 0; i < n; i++) 
@@ -150,21 +150,21 @@ int main() {
 
     //calcula a norma resíduo com os valores de A e x obtidos 
     norma_residuo = calcResiduoSL(A, b, x, n, k, &tResiduo);
-    printf("Norma do resíduo calculada em %.6es: %.6e\n", tResiduo, norma_residuo);
+    //printf("Norma do resíduo calculada em %.6es: %.6e\n", tResiduo, norma_residuo);
 
     // -------------------- Impressão dos resultados --------------------
-    printf("\n\n############## RESULTADOS FINAIS ##############\n");
-    printf("%d\n", n);
+    //printf("\n\n############## RESULTADOS FINAIS ##############\n");
+    fprintf(stdout,"%d\n", n);
     for (int i = 0; i < n; ++i)
-        printf("%.16g ", x[i]);
+        fprintf(stdout,"%.16g ", x[i]);
     printf("\n");
 
-    printf("Norma do erro: %.8e\n", normaFinal);
-    printf("Norma do resíduo: %.8e\n", norma_residuo);
-    printf("Tempo pré-cond: %.8e\n", tPrecond);
-    printf("Tempo total PCG: %.8e\n", tPCG);
-    printf("Tempo cálculo resíduo: %.8e\n", tResiduo);
-    printf("Iterações: %d\n", iter);
+    fprintf(stdout,"%.8e\n", normaFinal);
+    fprintf(stdout, "%.8e\n", norma_residuo);
+    fprintf(stdout, "%.8e\n", tPrecond);
+    fprintf(stdout, "%.8e\n", tPCG);
+    fprintf(stdout, "%.8e\n", tResiduo);
+    //fprintf(stdout,Iterações: %d\n", iter);
 
     // -------------------- Libera memória --------------------
     free(A);

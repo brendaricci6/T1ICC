@@ -101,9 +101,9 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         norma_r = sqrt(norma_r); //raiz quadrada
 
         if (norma_r < eps) {
-            printf("Convergiu em %d iterações. ||r|| = %.6e\n", iter, norma_r);
+            //printf("Convergiu em %d iterações. ||r|| = %.6e\n", iter, norma_r);
             free(r); free(z); free(p); free(Ap); //libera mem
-            printf ("##########iterações: %d", iter);
+            //printf ("##########iterações: %d", iter);
             return iter; //retorna número de iterações
         }
 
@@ -132,7 +132,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
     
     // Se o loop terminar sem atingir a tolerância
     
-    printf("Aviso: não convergiu após %d iterações.\n", maxit);
+    //printf("Aviso: não convergiu após %d iterações.\n", maxit);
     free(r); free(z); free(p); free(Ap);
     return maxit;
 }

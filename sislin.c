@@ -6,6 +6,8 @@
 #include "utils.h"
 #include "sislin.h"
 
+//Funções Auxiliares de geração de coeficiente aleatórios
+
 static inline real_t generateRandomA( unsigned int i, unsigned int j, unsigned int k );
 static inline real_t generateRandomB( unsigned int k );
 
@@ -30,6 +32,8 @@ static inline real_t generateRandomB( unsigned int k )
   static real_t invRandMax = 1.0 / (real_t)RAND_MAX;
   return (real_t)(k<<2) * (real_t)random() * invRandMax;
 }
+
+//funções de alocação e liberação de memória
 
 //função de alocação da matriz principal A
 int alocaKDiagonal(int n, real_t ***matriz) {
@@ -58,6 +62,7 @@ int alocaKDiagonal(int n, real_t ***matriz) {
     return 1; //
 }
 
+//aloca vetor B
 int alocaVetorB(int n, real_t **vetor) {
     *vetor = (real_t *)malloc(n * sizeof(real_t));
     if (*vetor == NULL) {
@@ -99,17 +104,21 @@ void imprimeSistema(int n, real_t *A, real_t *B) {
 }
 
 
-
+//função principal para gerar a Matriz A KDiagonal e o Vetor B.
 void criaKDiagonal(int n, int k, real_t *A, real_t *B) {
-    //preenche a matriz
+    // d é o raio de diagonais
+    // (k é o número total de diagonais, ímpar: k = 2d + 1)
     int d = (k - 1) / 2;
+
+    //preenche A
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
+            //verifica se o elemento está dentro da banda diagonal: |i - j| <= d
             if (abs(i - j) <= d) {
-                // Correct way to access element (i, j) in a 1D array
+                // Preenche com valor aleatório
                 A[i * n + j] = generateRandomA(i, j, k);
             }
-            // Optional: Initialize non-diagonal elements to 0
+            // Se estiver fora da banda, o elemento é zero
             else {
                 A[i * n + j] = 0.0;
             }
@@ -118,21 +127,24 @@ void criaKDiagonal(int n, int k, real_t *A, real_t *B) {
     
     //preenche o vetor
     for (int i = 0; i < n; ++i) {
-        // Correct way to access element i in a 1D array
         B[i] = generateRandomB(k);
     }
 }
 
-/* Gera matriz simetrica positiva */
+//função que transforma um sistema Ax=b em um sistema equivalente simétrico e positivo-definido (SPD)
+//método padrão para garantir que a matriz A' seja SPD, permitindo o uso do PCG.
 void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_t *bsp, real_t *tempo)
 {
- *tempo = timestamp();
+ *tempo = timestamp(); //inicia medição de tempo 
 
-    // Calcula A' = Aᵗ * A
+    // Calcula A' = A~T * A
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
             real_t soma = 0.0;
-            // Produto escalar da coluna 'i' de A pela coluna 'j' de A
+            //cálculo do elemento (i, j) de AT A: (AT)_i * A_j
+            // A coluna 'i' de AT é a linha 'i' de A. A coluna 'j' de A é A_j.
+            // O código implementa o produto escalar da coluna 'i' de A pela coluna 'j' de A:
+            // (AT A)i,j = Σ_k A[k, i] * A[k, j]
             for (int k2 = 0; k2 < n; ++k2) {
                 soma += A[k2 * n + i] * A[k2 * n + j];
             }
@@ -141,10 +153,11 @@ void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_
         }
     }
 
-    // Calcula b' = Aᵗ * b
+    // Calcula b' = AT * b
     for (int i = 0; i < n; ++i) {
         real_t soma = 0.0;
-        // Produto escalar da coluna 'i' de A pelo vetor b
+        // Cálculo do elemento 'i' de AT b: (AT)_i * b
+        // Produto escalar da coluna 'i' de A pelo vetor b: Σ_k A[k, i] * b[k]
         for (int k2 = 0; k2 < n; ++k2) {
             soma += A[k2 * n + i] * b[k2];
         }
@@ -152,19 +165,25 @@ void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_
         bsp[i] = soma;
     }
 
-    *tempo = timestamp() - *tempo; 
+    *tempo = timestamp() - *tempo; //finaliza medição de tempo 
 }
 
+//funç~es de pré-condicionamento
 
+//Gera os vetores de Decomposição DLU para uma matriz A.
+//D: Diagonal principal
+//L: Sub-diagonal
+//U: Super-diagonal
 void geraDLU (real_t *A, int n, int k,
               real_t *D, real_t *L, real_t *U, rtime_t *tempo, double eps)
 {
     *tempo = timestamp();
 
-    /* preenche */
+    /* preenche o vetor D com a diagonal principal*/
     for (int i = 0; i < n; ++i) {
         D[i] = A[i * n + i];
     }
+    //preenche os vetores L e U com as diagonais vizinhas (sub e super)
     for (int i = 0; i < n - 1; ++i) {
         /* subdiagonal L: A[(i+1), i] */
         L[i] = A[(i + 1) * n + i];
@@ -177,7 +196,7 @@ void geraDLU (real_t *A, int n, int k,
         if (ABS(D[i]) < eps) {
             /* aviso e correção */
             // fprintf(stderr, "Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, (*D)[i], eps);
-            D[i] = eps;
+            D[i] = eps; //define um valor mínimo (eps) para evitar instabilidade
         }
     }
 
@@ -185,18 +204,24 @@ void geraDLU (real_t *A, int n, int k,
 }
 
 /**
- * Devolve matriz M⁻¹
- *
+ * Devolve o pré-condicionador M.
+ * w (omega) é o parâmetro de relaxamento.
+ * w = 0.0 -> Pré-condicionador Jacobi (M = D)
+ * w = -1.0 -> Sem pré-condicionador (M = I)
+ * Outros valores de w podem indicar SOR ou SSOR (não implementados aqui)
  */
 void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k, real_t *M, rtime_t *tempo, double eps)
 {
     *tempo = timestamp();
 
+    //caso 1: w = -1.0 -> Sem pré-condicionador (M = I)
+    // função retorna sem preencher M.
     if (w == -1.0) {
         *tempo = timestamp() - *tempo;
         return;
     }
 
+    //caso 2: w = 0.0 -> Pré-condicionador Jacobi (M = D)
     if (w == 0.0) {
         /* Jacobi: devolve vetor diagonal D (com proteção numérica) */
         if (!M) {
@@ -205,7 +230,8 @@ void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k, real_t
             *tempo = timestamp() - *tempo;
             return;
         }
-
+        
+        // Define M como a diagonal D
         const real_t eps = 1e-12;
         for (int i = 0; i < n; ++i) {
             real_t val = D[i];
@@ -214,23 +240,26 @@ void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k, real_t
                 // fprintf(stderr, "Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, val, eps);
                 val = eps;
             }
-            M[i] = val;
+            M[i] = val; // M armazena a diagonal D
         }
         *tempo = timestamp() - *tempo;
         return;
     }
 
+    //
     fprintf(stderr, "pré-condicionador com w=%lf não implementado (usar -1 ou 0.0).\n", w);
     free(M);
     *tempo = timestamp() - *tempo;
     return;
 }
 
+//Funções de pós-Processamento
 
+//Calcula a Norma do Resíduo Euclidiano (||r||2 = ||b - A*X||2) para avaliar a precisão
 real_t calcResiduoSL (real_t *A, real_t *b, real_t *X,
 		      int n, int k, rtime_t *tempo)
 {
-    rtime_t t0 = timestamp();
+    rtime_t t0 = timestamp(); // Inicia a medição de tempo
 
     real_t *r = malloc(n * sizeof(real_t));
     if (!r) {
