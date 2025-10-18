@@ -21,6 +21,6 @@
  *          0 se solução inicial já é correta (r==0),
  *         -1 em caso de quebra numérica (p^T A p == 0 ou divisão por zero no pré-condicionador).
  */
-int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double eps, real_t *M, real_t *normaFinal);
+int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double eps, real_t *M, real_t *normaFinal, rtime_t *tempoIter);
 
 #endif

@@ -40,7 +40,7 @@ int alocaKDiagonal(int n, real_t ***matriz) {
     //aloca o ponteiro para as linhas
     *matriz = (real_t **)malloc(n * sizeof(real_t *));
     if (*matriz == NULL) {
-        fprintf(stderr, "ERRO: Falha ao alocar memória para as linhas da matriz.\n");
+        printf("ERRO: Falha ao alocar memória para as linhas da matriz.\n");
         return 0; //retorna falha
     }
 
@@ -49,7 +49,7 @@ int alocaKDiagonal(int n, real_t ***matriz) {
         //calloc inicializado elementos com 0.0
         (*matriz)[i] = (real_t *)calloc(n, sizeof(real_t));
         if ((*matriz)[i] == NULL) {
-            fprintf(stderr, "ERRO: Falha ao alocar memória para as colunas na linha %d.\n", i);
+            printf("ERRO: Falha ao alocar memória para as colunas na linha %d.\n", i);
             //se falhar libera tudo que já foi alocado
             for (int j = 0; j < i; ++j) {
                 free((*matriz)[j]);
@@ -66,7 +66,7 @@ int alocaKDiagonal(int n, real_t ***matriz) {
 int alocaVetorB(int n, real_t **vetor) {
     *vetor = (real_t *)malloc(n * sizeof(real_t));
     if (*vetor == NULL) {
-        fprintf(stderr, "ERRO: Falha ao alocar memória para o vetor.\n");
+        printf("ERRO: Falha ao alocar memória para o vetor.\n");
         return 0; //falha
     }
     return 1; //sucesso    
@@ -195,7 +195,7 @@ void geraDLU (real_t *A, int n, int k,
     for (int i = 0; i < n; ++i) {
         if (ABS(D[i]) < eps) {
             /* aviso e correção */
-            // fprintf(stderr, "Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, (*D)[i], eps);
+            // printf("Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, (*D)[i], eps);
             D[i] = eps; //define um valor mínimo (eps) para evitar instabilidade
         }
     }
@@ -225,19 +225,17 @@ void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k, real_t
     if (w == 0.0) {
         /* Jacobi: devolve vetor diagonal D (com proteção numérica) */
         if (!M) {
-            fprintf(stderr, "ERRO: falha ao alocar M em geraPreCond()\n");
-            free(M);
             *tempo = timestamp() - *tempo;
+            printf("ERRO: falha ao alocar M em geraPreCond()\n");
             return;
         }
         
         // Define M como a diagonal D
-        const real_t eps = 1e-12;
         for (int i = 0; i < n; ++i) {
             real_t val = D[i];
             if (ABS(val) < eps) {
                 // evitar divisão por zero no precond
-                // fprintf(stderr, "Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, val, eps);
+                // printf("Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, val, eps);
                 val = eps;
             }
             M[i] = val; // M armazena a diagonal D
@@ -247,8 +245,7 @@ void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k, real_t
     }
 
     //
-    fprintf(stderr, "pré-condicionador com w=%lf não implementado (usar -1 ou 0.0).\n", w);
-    free(M);
+    printf("pré-condicionador com w=%lf não implementado (usar -1 ou 0.0).\n", w);
     *tempo = timestamp() - *tempo;
     return;
 }
@@ -263,7 +260,7 @@ real_t calcResiduoSL (real_t *A, real_t *b, real_t *X,
 
     real_t *r = malloc(n * sizeof(real_t));
     if (!r) {
-        fprintf(stderr, "Erro de alocação no cálculo do resíduo.\n");
+        printf("Erro de alocação no cálculo do resíduo.\n");
         return -1;
     }
 

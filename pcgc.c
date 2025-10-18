@@ -10,9 +10,9 @@
 // n: Dimensão do sistema
 // maxit: Número máximo de iterações (retorno da função)
 // eps: Tolerância de convergência (erro absoluto máximo ||r||)
-//M: Vetor pré-condicionador (diagonal de M_inv)
+//M: é a Diagonal de A
 // normaFinal: Ponteiro para armazenar a norma do resíduo final
-int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double eps, real_t *M, real_t *normaFinal)
+int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double eps, real_t *M, real_t *normaFinal, rtime_t *tempoIter)
 {
     // Alocação dos vetores auxiliares
     real_t *r = malloc(n * sizeof(real_t));  // resíduo
@@ -22,12 +22,12 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
 
     //verifica a alocação de memória
     if (!r || !z || !p || !Ap) {
-        fprintf(stderr, "Erro: falha de alocação de memória.\n");
+        printf("Erro: falha de alocação de memória.\n");
         return -1; //retorna o erro
     }
 
     
-    // --- Passo 1: calcular o resíduo inicial r = b - A*x ---
+    // Passo 1: calcular o resíduo inicial r = b - A*x
     for (int i = 0; i < n; i++) {
         real_t soma = 0.0;
         //multiplicação da linha i de A pelo vetor x
@@ -41,17 +41,17 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         norma_r0 += r[i] * r[i];
     norma_r0 = sqrt(norma_r0);
 
-    // --- Passo 2: aplicar pré-condicionador M (Jacobi) ---
+    // Passo 2: aplicar pré-condicionador M (Jacobi)
     //o pré-condicionador é aplicado para obter o resídulo pré-condicionado 'z'
-    //M é um vetor de inversos da diagonal 
+    //M é a diagonal de A
     for (int i = 0; i < n; i++) {
-        if (M != NULL && ABS(M[i]) > 1e-12) //se M contém a digonal
-            z[i] = r[i] * M[i]; 
-        else //se o M não foi fornecido ou foi zero
+        if (M != NULL && ABS(M[i]) > eps)
+            z[i] = r[i] / M[i];
+        else
             z[i] = r[i]; // sem pré-condicionador
     }
 
-    // --- Passo 3: inicializar direção de busca p = z ---
+    // Passo 3: inicializar direção de busca p = z
     for (int i = 0; i < n; i++)
         p[i] = z[i];
 
@@ -60,11 +60,11 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
     for (int i = 0; i < n; i++)
         rz_old += r[i] * z[i];
 
-    //----------------------------------------------------------------------
-    // --------------------- Loop principal ---------------------------------
-    //----------------------------------------------------------------------
-    for (int iter = 1; iter <= maxit; iter++) {
-        // --- Ap = A * p ---
+    // ============== Loop principal ==============
+    int iter;
+    *tempoIter = timestamp();
+    for (iter = 1; iter <= maxit; iter++) {
+        // Ap = A * p
         //Multiplicação da matriz A pelo vetor de direção de busca p
         for (int i = 0; i < n; i++) {
             real_t soma = 0.0;
@@ -73,51 +73,57 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
             Ap[i] = soma;
         }
 
-        // --- calcular alpha (tamanho do passo) ---
+        // calcular alpha (tamanho do passo)
         real_t pAp = 0.0;
         for (int i = 0; i < n; i++)
             pAp += p[i] * Ap[i];
 
         //tratamento se for zero
-        if (ABS(pAp) < 1e-12) {
-            fprintf(stderr, "Erro numérico: p^T A p = 0.\n");
+        if (ABS(pAp) < eps) {
+            printf("Erro numérico: p^T A p = 0.\n");
             break;
         }
 
         real_t alpha = rz_old / pAp;
 
-        // --- atualizar x = x + alpha*p ---
+        // atualizar x = x + alpha*p
         for (int i = 0; i < n; i++)
             x[i] += alpha * p[i];
 
-        // --- atualizar r = r - alpha*Ap ---
+        // atualizar r = r - alpha*Ap
         for (int i = 0; i < n; i++)
             r[i] -= alpha * Ap[i];
 
-        // --- verificar convergência: ||r|| < eps ---
+        // verificar convergência: ||r|| < eps
         real_t norma_r = 0.0;
         for (int i = 0; i < n; i++)
             norma_r += r[i] * r[i]; //soma dos quadrados
         norma_r = sqrt(norma_r); //raiz quadrada
-
+        // atribui valor do erro 
+        *normaFinal = norma_r;
         if (norma_r < eps) {
-            //printf("Convergiu em %d iterações. ||r|| = %.6e\n", iter, norma_r);
-            free(r); free(z); free(p); free(Ap); //libera mem
-            //printf ("##########iterações: %d", iter);
+            // atribui valor do erro 
+            // calcula tempo medio das iteracoes ate agora
+            *tempoIter = timestamp() - *tempoIter;
+            *tempoIter = *tempoIter / iter;
+            free(r); 
+            free(z); 
+            free(p); 
+            free(Ap);
             return iter; //retorna número de iterações
         }
 
-        // --- aplicar pré-condicionador: z = M^{-1} * r ---
+        // aplicar pré-condicionador: z = M^{-1} * r
         //calcula o novo resíduo pré-condicionado
         for (int i = 0; i < n; i++) {
-            if (M != NULL && fabs(M[i]) > 1e-12)
+            if (M != NULL && ABS(M[i]) > eps)
                 z[i] = r[i] / M[i];
             else
                 z[i] = r[i];
         }
 
-        // --- Calcular o fator beta (Gram-Schmidt) ---
-        // --- beta = ((r^T)z novo) / ((r~T)z antigo) ---
+        // Calcular o fator beta (Gram-Schmidt)
+        // beta = ((r^T)z novo) / ((r~T)z antigo)
         real_t rz_new = 0.0;
         for (int i = 0; i < n; i++)
             rz_new += r[i] * z[i];
@@ -125,14 +131,19 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         real_t beta = rz_new / rz_old;
         rz_old = rz_new; //atualiza
 
-        // --- atualizar direção p = z + beta*p ---
+        // atualizar direção p = z + beta*p
         for (int i = 0; i < n; i++)
             p[i] = z[i] + beta * p[i];
     }
-    
+    // calcula tempo medio das iteracoes ate agora
+    *tempoIter = timestamp() - *tempoIter;
+    *tempoIter = *tempoIter / iter;
     // Se o loop terminar sem atingir a tolerância
     
     //printf("Aviso: não convergiu após %d iterações.\n", maxit);
-    free(r); free(z); free(p); free(Ap);
-    return maxit;
+    free(r); 
+    free(z); 
+    free(p); 
+    free(Ap);
+    return iter;
 }

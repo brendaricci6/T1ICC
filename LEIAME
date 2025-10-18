@@ -1,46 +1,26 @@
-Autoria: Brenda Pinheiro Ricci GRR20214329
-João Pedro Viana GRR20215518
+LEIAME
 
-O presente projeto tem como objetivo principal a implementação e análise de um programa que resolve Sistemas Lineares (SLs) baseado no método iterativo do Gradiente Conjugado Pré-Condicionado (PCG). 
-O sistema linear é inicialmente gerado como uma matriz kdiagonal.
-Para garantir que o Gradiente Conjgado opere apenas em matrizes simétricas e positivas definidas, o sistema original (A, b) é transformado no sistema normal, resultando no sistema SPD (A', b') em que A' = A^T A e b' = A^T b.
-O projeto é estruturado em três módulos principais: sislin, pcgc e o programa principal cgSolver.c.
+Autoria
+-------
+Brenda Pinheiro Ricci - GRR20214329
+João Pedro Vieira Santos - GRR20215518
 
-sislin
-O módulo sislin é responsável por toda a infraestrutura de manipulação do Sistema Linear.
-incluindo alocação e desalocação de memória, geração de matrizes kdiagonais, transformação do sistema em SPD, decomposição de matrizes para fins de pré-condicionamento, geração do pré-condicionador e cálculo do resíduo
-As estruturas de dados utilizadas para representar o sistema linear são vetores unidimensionais. 
-A matriz de coeficientes A (ou A') de dimensão n por n é armazenada em um vetor real_t *A. 
-O acesso ao elemento A(i,j) é feito pelo mapeamento A[i * n + j], o que otimiza o acesso e a passagem de argumentos em funções de álgebra linear.
-De forma similar, os vetores de termos independentes b (ou b'), solução x e o vetor que representa o pré-condicionador M são armazenados em vetores 1D (real_t *b, real_t *x, real_t *M). 
-A função genSimetricaPositiva é provavelmente a função mais essencial, isso pois executa a transformação (A → A transposto vezes A) e (b → A transposto vezes b), gerando o sistema SPD (A', b') necessário para o método de Gradiente Conjugado. 
-Essa transformação garante a robustez do método iterativo em relação ao sistema linear original, que pode não ser SPD.
-Para o pre-condicionamento, o módulo sislin oferece a função geraDLU, que extrai a diagonal principal (D), a subdiagonal (L) e a superdiagonal (U) da matriz A', utilizada pela função geraPreCond para construir o pré-condicionador M. 
-Atualmente, geraPreCond suporta duas opções de pré-condicionador:
-1-Sem pré-condicionador (w = -1.0): retorna M = NULL, o que equivale a M = I (matriz identidade).
-2-Jacobi (w = 0.0): retorna M como o vetor diagonal D da matriz A', permitindo o pré-condicionamento z_i = r_i / D_i
-Por fim, a função calcResiduoSL calcula a norma euclidiana (norma 2) do resíduo r = b' - A" x,
+Objetivo
+--------
+Resolver Sistemas Lineares (SLs) usando Gradiente Conjugado Pré-Condicionado (PCG)
+O sistema k-diagonal (A, b) é transformado em SPD (A' = A^T A, b' = A^Tb) para garantir convergência
 
-pcgc
-O módulo pcgc constitui a parte principal do trabalho, implementando as funções necessárias do algoritmo de Gradiente Conjugado Pré-Condicionado. 
-A função mais importante do módumo é a conjugateGradient
-O módulo pcgc também contém funções estáticas auxiliares, como dot (produto escalar ), norm2 (norma L2) e infnorm_diff (norma infinita da diferença), que são fundamentais para o cálculo dos parâmetros e para os critérios de parada e avaliação do método.
+Estruturas de Dados
+------------------
+- Matrizes alocadas com 1 dimensão, para acessar as posições usamos A[i*n+j]
+- Vetores: b, x, M, D, L, U
 
-Programa principal: cgSolverc
-Esse é o módumo que coordena toda a execução do processo .
-Fluxo de execução do cgSolver.c:
-1 - leitura de parâmetros: Lê da entrada padrão os parametros de controle e dimensão n, número de diagonais k, parâmetro de pré-condicionamento w, número máximo de iterações maxit e tolerância de erro epsilon. também verifica a validade das entradas .
-2- Inicialização e geração do SL original: Aloca a matriz A e o vetor b no formato 1D e gera o sistema k-diagonal aleatório utilizando a função criaKDiagonal do módulo sislin.
-3  Transformação para SPD: Aloca a matriz A' (ASP) e o vetor b' (bsp) e realiza a transformação para o sistema simétrico e positivo definido (A' x = b'), por meio da função genSimetricaPositiva. O siste,a original (A, b) é então desalocado.
-4 -preparação do pré-condicionador:
-    4.1. Utiliza a função geraDLU para obter as diagonais D, L e U da matriz A'.
-    4.2. Utiliza a função geraPreCond, com o parâmetro w, para construir o pré condicionador M
-5. Resolução com PCG: Chama a função conjugateGradient do módulo pcgc para resolver o sistema (A' x = b'). São registrados o tempo de execução total, o número de iterações, o resíduo interno final e a norma infinita do erro aproximado.
-6. Cálculo do resíduo final: Calcula a norma euclidiana do resíduo final por meio da função calcResiduoSL
-7. Impressão dos resultados: Exibe a dimensão n, o vetor solução x (com 16 dígitos de precisão) e as métricas de desempenho (norma do erro aproximado, norma do resíduo, tempo de cálculo do pré-condicionador, tempo médio por iteração e tempo de cálculo do resíduo), todas com 8 dígitos de precisão.
-8. limpeza: Desaloca toda a memória utilizada, garantindo o encerramento correto do programa.
+Módulos
+-------
+sislin: alocação e liberação de memória, geração de matrizes k-diagonais (criaKDiagonal), transformação SPD (genSimetricaPositiva), pré-condicionamento (geraDLU, geraPreCond), cálculo de resíduo (calcResiduoSL)
 
-Portanto, pode-se concluir que 0 papel de cada módulo no programa principal são bem definidos, 
-o módulo sislin fornece as funcionalidades de geração e pré-processamento do sistema (transformação SPD, decomposição DLU, construção do pré-condicionador M), e a a avaliação da solução (cálculo do resíduo final). 
-O módulo pcgc implementa o algoritmo iterativo do Gradiente Conjugado
-O programa principal cgSolver.c atua como comandante, lendo os dados de entrada, coordenando a execução dos módulos e apresentando os resultados e métricas de desempenho de forma estruturada.
+pcgc: implementação do PCG (conjugateGradient)
+
+cgSolver.c: função main do projeto. Responsável pela leitura de parâmetros, geração do SL, transformação SPD, pré-condicionamento, resolução PCG, cálculo do resíduo, impressão de resultados e liberação de memória
+
+
