@@ -1,5 +1,5 @@
 Autoria: Brenda Pinheiro Ricci GRR20214329
-João Pedro Viana 
+João Pedro Viana GRR20215518
 
 O presente projeto tem como objetivo principal a implementação e análise de um programa que resolve Sistemas Lineares (SLs) baseado no método iterativo do Gradiente Conjugado Pré-Condicionado (PCG). 
 O sistema linear é inicialmente gerado como uma matriz kdiagonal.
