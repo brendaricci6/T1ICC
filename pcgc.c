@@ -3,20 +3,9 @@
 #include <math.h>
 #include "utils.h"
 
-/**
- * Função simples de Gradientes Conjugados Pré-condicionados (Jacobi)
- *
- * Resolve A*x = b
- * Parâmetros:
- *   A: matriz completa (n x n)
- *   b: vetor de termos independentes
- *   x: vetor solução (deve estar inicializado, ex: zeros)
- *   n: tamanho do sistema
- *   maxit: número máximo de iterações
- *   eps: tolerância de erro (critério de parada)
- *   M: vetor diagonal do pré-condicionador (pode ser NULL para CG puro)
- */
-int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double eps, real_t *M)
+//Função Gradientes Conjugados Pré-condicionados (Jacobi)
+
+int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double eps, real_t *M, real_t *normaFinal)
 {
     real_t *r = malloc(n * sizeof(real_t));  // resíduo
     real_t *z = malloc(n * sizeof(real_t));  // resíduo pré-condicionado
