@@ -26,21 +26,27 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         return -1; //retorna o erro
     }
 
+    
     // --- Passo 1: calcular o resíduo inicial r = b - A*x ---
     for (int i = 0; i < n; i++) {
         real_t soma = 0.0;
         //multiplicação da linha i de A pelo vetor x
         for (int j = 0; j < n; j++)
-            soma += A[i*n + j] * x[j]; //matriz A
-        r[i] = b[i] - soma;
-    }
+        soma += A[i*n + j] * x[j]; //matriz A
+    r[i] = b[i] - soma;
+}
+    // Calcula norma inicial do resíduo
+    real_t norma_r0 = 0.0;
+    for (int i = 0; i < n; i++)
+        norma_r0 += r[i] * r[i];
+    norma_r0 = sqrt(norma_r0);
 
     // --- Passo 2: aplicar pré-condicionador M (Jacobi) ---
     //o pré-condicionador é aplicado para obter o resídulo pré-condicionado 'z'
     //M é um vetor de inversos da diagonal 
     for (int i = 0; i < n; i++) {
         if (M != NULL && ABS(M[i]) > 1e-12) //se M contém a digonal
-            z[i] = r[i] / M[i]; 
+            z[i] = r[i] * M[i]; 
         else //se o M não foi fornecido ou foi zero
             z[i] = r[i]; // sem pré-condicionador
     }
@@ -97,13 +103,14 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         if (norma_r < eps) {
             printf("Convergiu em %d iterações. ||r|| = %.6e\n", iter, norma_r);
             free(r); free(z); free(p); free(Ap); //libera mem
+            printf ("##########iterações: %d", iter);
             return iter; //retorna número de iterações
         }
 
         // --- aplicar pré-condicionador: z = M^{-1} * r ---
         //calcula o novo resíduo pré-condicionado
         for (int i = 0; i < n; i++) {
-            if (M != NULL && abs(M[i]) > 1e-12)
+            if (M != NULL && fabs(M[i]) > 1e-12)
                 z[i] = r[i] / M[i];
             else
                 z[i] = r[i];
@@ -124,6 +131,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
     }
     
     // Se o loop terminar sem atingir a tolerância
+    
     printf("Aviso: não convergiu após %d iterações.\n", maxit);
     free(r); free(z); free(p); free(Ap);
     return maxit;
