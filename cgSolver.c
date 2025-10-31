@@ -65,6 +65,7 @@ int main() {
     }
 
     //marca tempo de geração da matriz A e vetor b 
+    rtime_t tGen = timestamp();
 
     //chama função que cria a matriz e o vetor B 
     criaKDiagonal(n, k, A, b);
@@ -74,7 +75,6 @@ int main() {
 
     real_t *ASP = calloc(n * n, sizeof(real_t));
     real_t *bsp = calloc(n, sizeof(real_t));
-    rtime_t tGen = timestamp();
 
     genSimetricaPositiva(A, b, n, k, ASP, bsp, &tGen);
 
@@ -129,7 +129,7 @@ int main() {
     } else {
         tPrecond = 0.0;
     }
-    
+
     #ifdef DEBUG
     printf("Pré-condicionador gerado em %.6es.\n", tPrecond);ac
 
