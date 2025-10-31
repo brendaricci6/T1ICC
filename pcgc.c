@@ -32,14 +32,9 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         real_t soma = 0.0;
         //multiplicação da linha i de A pelo vetor x
         for (int j = 0; j < n; j++)
-        soma += A[i*n + j] * x[j]; //matriz A
-    r[i] = b[i] - soma;
-}
-    // Calcula norma inicial do resíduo
-    real_t norma_r0 = 0.0;
-    for (int i = 0; i < n; i++)
-        norma_r0 += r[i] * r[i];
-    norma_r0 = sqrt(norma_r0);
+            soma += A[i*n + j] * x[j]; //matriz A
+        r[i] = b[i] - soma;
+    }
 
     // Passo 2: aplicar pré-condicionador M (Jacobi)
     //o pré-condicionador é aplicado para obter o resídulo pré-condicionado 'z'
@@ -80,7 +75,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
 
         //tratamento se for zero
         if (ABS(pAp) < eps) {
-            printf("Erro numérico: p^T A p = 0.\n");
+            // printf("Erro numérico: p^T A p = 0.\n");
             break;
         }
 

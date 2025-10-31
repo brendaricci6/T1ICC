@@ -38,14 +38,16 @@ int main() {
         return 1;
     }
 
-    //exibição dos parâmetros lidos
-    //printf("\n--- Valores lidos ---\n");
-    //printf("Dimensão (n): %d\n", n);
-    //printf("Diagonais (k): %d\n", k);
-    //printf("Pré-condicionador (ω): %f\n", omega);
-    //printf("Max. Iterações (maxit): %d\n", maxit);
-    //printf("Tolerância (ε): %g\n", epsilon);
-    //printf("==========-\n");
+    #ifdef DEBUG
+    // exibição dos parâmetros lidos
+    printf("\n--- Valores lidos ---\n");
+    printf("Dimensão (n): %d\n", n);
+    printf("Diagonais (k): %d\n", k);
+    printf("Pré-condicionador (ω): %f\n", omega);
+    printf("Max. Iterações (maxit): %d\n", maxit);
+    printf("Tolerância (ε): %g\n", epsilon);
+    printf("==========-\n");
+    #endif
 
     // ========== Geração do sistema ==========
     #ifdef DEBUG
@@ -63,13 +65,18 @@ int main() {
     }
 
     //marca tempo de geração da matriz A e vetor b 
-    rtime_t tGen = timestamp();
 
     //chama função que cria a matriz e o vetor B 
     criaKDiagonal(n, k, A, b);
     #ifdef DEBUG
     imprimeSistema(n, A, b);
     #endif
+
+    real_t *ASP = calloc(n * n, sizeof(real_t));
+    real_t *bsp = calloc(n, sizeof(real_t));
+    rtime_t tGen = timestamp();
+
+    genSimetricaPositiva(A, b, n, k, ASP, bsp, &tGen);
 
     //calcula o tempo gasto 
     tGen = timestamp() - tGen;
@@ -78,7 +85,7 @@ int main() {
     #endif
     // ========== Decomposição DLU ==========
 
-    real_t *D =  malloc(n * sizeof(real_t));
+    real_t *D = malloc(n * sizeof(real_t));
     real_t *L = malloc((k-1)/2 * n * sizeof(real_t));
     real_t *U = malloc((k-1)/2 * n * sizeof(real_t));
 
@@ -86,6 +93,7 @@ int main() {
     //calcula a decomposição DLU de A
     //armazena o tempo em tDLU
     geraDLU(A, n, k, D, L, U, &tDLU, epsilon);
+
     #ifdef DEBUG
     printf("Decomposição DLU gerada em %.6es.\n", tDLU);
 
@@ -121,6 +129,7 @@ int main() {
     } else {
         tPrecond = 0.0;
     }
+    
     #ifdef DEBUG
     printf("Pré-condicionador gerado em %.6es.\n", tPrecond);ac
 
@@ -146,7 +155,7 @@ int main() {
     //maxit: max. iterações
     //epsilon: tolerância
     //M: pré-condicionador
-    iter = gradienteConjugado(A, b, x, n, maxit, epsilon, M, &normaFinal, &tempoIter);
+    iter = gradienteConjugado(ASP, bsp, x, n, maxit, epsilon, M, &normaFinal, &tempoIter);
     
     //calcula tempo total da execução do pcg
     #ifdef DEBUG
@@ -165,7 +174,7 @@ int main() {
     #ifdef DEBUG
     printf("Calculando residuo...\n");
     #endif
-    norma_residuo = calcResiduoSL(A, b, x, n, k, &tResiduo);
+    norma_residuo = calcResiduoSL(ASP, bsp, x, n, k, &tResiduo);
     #ifdef DEBUG
     printf("Norma do resíduo calculada em %.6es: %.6e\n", tResiduo, norma_residuo);
     #endif
