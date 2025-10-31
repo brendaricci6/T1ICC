@@ -160,8 +160,8 @@ void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k, real_t
     //caso 1: w = -1.0 -> Sem pré-condicionador (M = I)
     // função retorna sem preencher M.
     if (w == -1.0) {
-        *tempo = timestamp() - *tempo;
-        return;
+        printf("pré-condicionador com w=%lf não implementado (0.0).\n", w);
+        exit(1);
     }
 
     //caso 2: w = 0.0 -> Pré-condicionador Jacobi (M = D)
@@ -190,7 +190,7 @@ void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k, real_t
     //
     printf("pré-condicionador com w=%lf não implementado (usar -1 ou 0.0).\n", w);
     *tempo = timestamp() - *tempo;
-    return;
+    exit(1);
 }
 
 //Funções de pós-Processamento

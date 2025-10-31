@@ -69,6 +69,7 @@ int main() {
 
     //chama função que cria a matriz e o vetor B 
     criaKDiagonal(n, k, A, b);
+
     #ifdef DEBUG
     imprimeSistema(n, A, b);
     #endif
@@ -92,7 +93,7 @@ int main() {
     //função que gera o DLU 
     //calcula a decomposição DLU de A
     //armazena o tempo em tDLU
-    geraDLU(A, n, k, D, L, U, &tDLU, epsilon);
+    geraDLU(ASP, n, k, D, L, U, &tDLU, epsilon);
 
     #ifdef DEBUG
     printf("Decomposição DLU gerada em %.6es.\n", tDLU);
@@ -127,7 +128,7 @@ int main() {
         }
         geraPreCond(D, L, U, omega, n, k, M, &tPrecond, epsilon);
     } else {
-        tPrecond = 0.0;
+        M = NULL;
     }
 
     #ifdef DEBUG
@@ -174,7 +175,7 @@ int main() {
     #ifdef DEBUG
     printf("Calculando residuo...\n");
     #endif
-    norma_residuo = calcResiduoSL(ASP, bsp, x, n, k, &tResiduo);
+    norma_residuo = calcResiduoSL(A, b, x, n, k, &tResiduo);
     #ifdef DEBUG
     printf("Norma do resíduo calculada em %.6es: %.6e\n", tResiduo, norma_residuo);
     #endif
@@ -187,10 +188,10 @@ int main() {
 
     printf("%.8g\n", normaFinal);
     printf("%.16g\n", norma_residuo);
-    printf("%.8g\n", tPrecond);
+    tPrecond == 0.0 ? printf("Nao calculado\n") : printf("%.8g\n", tPrecond);
     printf("%.8g\n", tempoIter);
     printf("%.8g\n", tResiduo);
-    //printf(Iterações: %d\n", iter);
+    // printf("Iterações: %d\n", iter);
 
     // ========== Libera memória ==========
     free(A);

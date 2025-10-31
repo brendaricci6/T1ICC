@@ -25,7 +25,6 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         printf("Erro: falha de alocação de memória.\n");
         return -1; //retorna o erro
     }
-
     
     // Passo 1: calcular o resíduo inicial r = b - A*x
     for (int i = 0; i < n; i++) {
@@ -40,7 +39,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
     //o pré-condicionador é aplicado para obter o resídulo pré-condicionado 'z'
     //M é a diagonal de A
     for (int i = 0; i < n; i++) {
-        if (M != NULL && ABS(M[i]) > eps)
+        if (M != NULL && ABS(M[i]) > __DBL_EPSILON__)
             z[i] = r[i] / M[i];
         else
             z[i] = r[i]; // sem pré-condicionador
@@ -74,7 +73,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
             pAp += p[i] * Ap[i];
 
         //tratamento se for zero
-        if (ABS(pAp) < eps) {
+        if (ABS(pAp) < __DBL_EPSILON__) {
             // printf("Erro numérico: p^T A p = 0.\n");
             break;
         }
@@ -96,6 +95,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         norma_r = sqrt(norma_r); //raiz quadrada
         // atribui valor do erro 
         *normaFinal = norma_r;
+
         if (norma_r < eps) {
             // atribui valor do erro 
             // calcula tempo medio das iteracoes ate agora
@@ -111,7 +111,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         // aplicar pré-condicionador: z = M^{-1} * r
         //calcula o novo resíduo pré-condicionado
         for (int i = 0; i < n; i++) {
-            if (M != NULL && ABS(M[i]) > eps)
+            if (M != NULL && ABS(M[i]) > __DBL_EPSILON__)
                 z[i] = r[i] / M[i];
             else
                 z[i] = r[i];
