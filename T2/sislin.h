@@ -1,6 +1,10 @@
 #ifndef __SISLIN_H__
 #define __SISLIN_H__
 
+// Definições para o formato de Armazenamento por Diagonais (DIA) da matriz ASP
+#define N_DIAG 7        // Número de diagonais armazenadas (para ASP)
+#define OFFSET_CENTER 3 // Índice da diagonal principal (7-1)/2
+
 typedef double * MatrizDIA;
 #define N_DIAG 7 // O número total de diagonais (2d + 1)
 #define OFFSET_CENTER 3 // O índice da diagonal principal (7-1)/2

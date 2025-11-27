@@ -49,7 +49,7 @@ int main() {
     printf("Gerando sistema tridiagonal simétrico positivo...\n");
     #endif
 
-    real_t *A = calloc(n * 7, sizeof(real_t)); //aloca matriz A inicializando com 0
+    real_t *A = calloc(n * k, sizeof(real_t)); //aloca matriz A inicializando com 0
     real_t *b = calloc(n, sizeof(real_t)); //aloca vetor B inicializando com 0
     real_t *x = calloc(n, sizeof(real_t)); //aloca o vetor de solução x inicializando com 0 
     
@@ -65,25 +65,33 @@ int main() {
     //chama função que cria a matriz e o vetor B 
     criaKDiagonal(n, k, A, b);
 
-    //#ifdef DEBUG
+    #ifdef DEBUG
     imprimeSistema(n, A, b);
-    //#endif
+    #endif
 
-    //#ifdef DEBUG
+    #ifdef DEBUG
     imprimeDiagonais(n, A, b);
-    //#endif
+    #endif
 
-    /*
-    real_t *ASP = calloc(n * n, sizeof(real_t));
+    
+    real_t *ASP = calloc(n * k, sizeof(real_t));
     real_t *bsp = calloc(n, sizeof(real_t));
 
     genSimetricaPositiva(A, b, n, k, ASP, bsp, &tGen);
+
+    #ifdef DEBUG
+    printf("--- Matriz ASP Gerada ---\n");
+    imprimeSistema(n, ASP, bsp); // <--- Nova chamada (recomendada)
+    imprimeDiagonais(n, ASP, bsp);
+    #endif
 
     //calcula o tempo gasto 
     tGen = timestamp() - tGen;
     #ifdef DEBUG
     printf("Sistema gerado em %.6es.\n\n", tGen);
     #endif
+
+
     // ========== Decomposição DLU ==========
 
     real_t *D = malloc(n * sizeof(real_t));
@@ -200,7 +208,7 @@ int main() {
     free(D);
     free(L);
     free(U);
-    if (M) free(M); */
+    if (M) free(M); 
 
     return 0;
 }

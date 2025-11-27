@@ -119,6 +119,15 @@ void criaKDiagonal(int n, int k, real_t *A, real_t *B) {
     }
 }
 
+// **Você precisará criar uma versão da getMatrizDIA que aceite k e d_A.**
+static inline real_t MatrizDiagonal(const real_t *A, int i, int j, int n, int k, int d) {
+    int offset = j - i;
+    if (abs(offset) <= d) {
+        int diag_idx = offset + d; 
+        return A[i * k + diag_idx]; 
+    }
+    return 0.0;
+}
 // sislin.c
 
 // Novo formato de A: MatrizDIA (n x k)
@@ -144,8 +153,8 @@ void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_
                 for (int k2 = 0; k2 < n; ++k2) {
                     // Substitua o acesso A[k2 * n + i] * A[k2 * n + j] 
                     // por acessos via função DIA:
-                    real_t val_ki = getMatrizDIA(A, k2, i, n, k, d_A); // A[k2][i]
-                    real_t val_kj = getMatrizDIA(A, k2, j, n, k, d_A); // A[k2][j]
+                    real_t val_ki = MatrizDiagonal(A, k2, i, n, k, d_A); // A[k2][i]
+                    real_t val_kj = MatrizDiagonal(A, k2, j, n, k, d_A); // A[k2][j]
                     soma += val_ki * val_kj;
                 }
                 // Armazenamento no formato DIA (n x 7)
@@ -163,7 +172,7 @@ void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_
         for (int k2 = 0; k2 < n; ++k2) {
             // Substitua o acesso A[k2 * n + i] * b[k2]
             // por acesso DIA para A:
-            real_t val_ki = getMatrizDIA(A, k2, i, n, k, d_A); // A[k2][i]
+            real_t val_ki = MatrizDiagonal(A, k2, i, n, k, d_A); // A[k2][i]
             soma += val_ki * b[k2];
         }
         bsp[i] = soma;
@@ -172,19 +181,18 @@ void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_
     *tempo = timestamp() - *tempo;
 }
 
-// **Você precisará criar uma versão da getMatrizDIA que aceite k e d_A.**
-static inline real_t getMatrizDIA(const real_t *A, int i, int j, int n, int k, int d) {
-    int offset = j - i;
-    if (abs(offset) <= d) {
-        int diag_idx = offset + d; 
-        return A[i * k + diag_idx]; 
-    }
-    return 0.0;
-}
 
 //funç~es de pré-condicionamento
 
 //Gera os vetores de Decomposição DLU para uma matriz A.
+//D: Diagonal principal
+//L: Sub-diagonal
+//U: Super-diagonal
+// sislin.c
+
+// sislin.c
+
+//Gera os vetores de Decomposição DLU para uma matriz A (no formato DIA: n x k).
 //D: Diagonal principal
 //L: Sub-diagonal
 //U: Super-diagonal
@@ -193,24 +201,39 @@ void geraDLU (real_t *A, int n, int k,
 {
     *tempo = timestamp();
 
-    /* preenche o vetor D com a diagonal principal*/
+    // Raio de banda: (k-1)/2. Este valor é o índice da diagonal principal.
+    int d_A = (k - 1) / 2; 
+    
+    // Índices de coluna no armazenamento DIA (n x k) para as 3 diagonais centrais:
+    int diag_D_idx = d_A;     // Índice da Diagonal Principal (offset 0)
+    int diag_L_idx = d_A - 1; // Índice da 1ª Subdiagonal (offset -1)
+    int diag_U_idx = d_A + 1; // Índice da 1ª Superdiagonal (offset +1)
+
+    // A matriz A é armazenada em formato DIA (n x k). 
+    // O acesso é dado por A[linha * k + indice_diagonal].
+
+    /* 1. Preenche o vetor D com a diagonal principal */
     for (int i = 0; i < n; ++i) {
-        D[i] = A[i * n + i];
+        // Acesso corrigido no formato DIA: D[i] = A[i][diag_D_idx]
+        D[i] = A[i * k + diag_D_idx]; 
     }
-    //preenche os vetores L e U com as diagonais vizinhas (sub e super)
+    
+    /* 2. Preenche os vetores L (Subdiagonal) e U (Superdiagonal) */
+    // Note que L e U armazenam n-1 elementos.
     for (int i = 0; i < n - 1; ++i) {
-        /* subdiagonal L: A[(i+1), i] */
-        L[i] = A[(i + 1) * n + i];
-        /* superdiagonal U: A[i, i+1] */
-        U[i] = A[i * n + (i + 1)];
+        /* Subdiagonal L: L[i] recebe A[i+1, i] (offset -1) */
+        // O elemento A[i+1, i] está na linha i+1, na coluna diag_L_idx do array DIA.
+        L[i] = A[(i + 1) * k + diag_L_idx];
+        
+        /* Superdiagonal U: U[i] recebe A[i, i+1] (offset +1) */
+        // O elemento A[i, i+1] está na linha i, na coluna diag_U_idx do array DIA.
+        U[i] = A[i * k + diag_U_idx];
     }
 
-    /* proteção: se alguma diagonal for zero ou muito pequena, aumente para epsilon */
+    /* 3. Proteção: se alguma diagonal for zero ou muito pequena */
     for (int i = 0; i < n; ++i) {
         if (ABS(D[i]) < eps) {
-            /* aviso e correção */
-            // printf("Warning: D[%d] muito pequeno (%.3e). Corrigindo para %.3e\n", i, (*D)[i], eps);
-            D[i] = eps; //define um valor mínimo (eps) para evitar instabilidade
+            D[i] = eps; // Define um valor mínimo (eps) para evitar instabilidade
         }
     }
 
@@ -279,11 +302,21 @@ real_t calcResiduoSL (real_t *A, real_t *b, real_t *X,
     }
 
     // Calcula r = b - A*x
+    int d_A = (k - 1) / 2; // Raio de banda da matriz original A
     for (int i = 0; i < n; ++i) {
         real_t Ax_i = 0.0;
-        for (int j = 0; j < n; ++j) {
-            Ax_i += A[i * n + j] * X[j];
+        
+        // Loop otimizado sobre as diagonais de A (k diagonais)
+        for (int diag_idx = 0; diag_idx < k; diag_idx++) {
+            int offset = diag_idx - d_A; // -d_A, ..., d_A
+            int j = i + offset; 
+            
+            // Checa limites de j: 0 <= j < n
+            if (j >= 0 && j < n) {
+                Ax_i += A[i * k + diag_idx] * X[j];
+            }
         }
+
         r[i] = b[i] - Ax_i;
     }
 

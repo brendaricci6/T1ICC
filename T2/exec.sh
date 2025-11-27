@@ -68,15 +68,15 @@ echo ""
 echo "--- Iniciando Testes de Execução ---"
 
 # Caso 1: Teste pequeno (Jacobi Precondicionado)
-run_test 20 7 0.0 500 1e-6 
+run_test 20 0.0 500 1e-6 
 
 # Caso 2: Teste médio (Sem Precondicionador) - O código tem um EXIT no geraPreCond para -1.0, então usaremos um valor implementado, como 0.0
 # Se o seu 'geraPreCond' for modificado para suportar w=-1.0, use o valor -1.0 aqui.
 # Como o código atual força 'exit(1)' para w != -1.0 E w != 0.0, usaremos um teste funcional com w=0.0
-run_test 100 7 0.0 1000 1e-8
+run_test 100 0.0 1000 1e-8
 
 # Caso 3: Teste maior, com mais diagonais e mais iterações
-run_test 500 7 0.0 2000 1e-7
+run_test 500 0.0 2000 1e-7
 
 # 3. Limpeza (opcional)
 # rm -f "$INPUT_FILE"
