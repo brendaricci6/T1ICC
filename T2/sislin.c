@@ -33,38 +33,83 @@ static inline real_t generateRandomB( unsigned int k )
   return (real_t)(k<<2) * (real_t)random() * invRandMax;
 }
 
+// Função auxiliar para acessar o elemento (i, j) da matriz DIA
+// A: ponteiro para o início da matriz n x 7 (armazenada em formato de matriz)
+// i, j: coordenadas
+// n: dimensão
+// Retorna: o valor A[i][j] (0.0 se fora da banda)
+static inline real_t getMatrizDIA(const real_t *A, int i, int j, int n) {
+    int offset = j - i; // Deslocamento da diagonal
+    // Verifica se está dentro das 7 diagonais (-3 <= offset <= 3)
+    if (offset >= -OFFSET_CENTER && offset <= OFFSET_CENTER) {
+        int diag_idx = offset + OFFSET_CENTER; // Índice da coluna (0 a 6)
+        // O elemento A[i][diag_idx] no armazenamento de matriz
+        return A[i * N_DIAG + diag_idx]; 
+    }
+    return 0.0;
+}
+
 //funções de alocação e liberação de memória
 
-//imprime o sistema linear
 void imprimeSistema(int n, real_t *A, real_t *B) {
     printf("--- Matriz A ---\n");
+    // Aqui N_DIAG deveria ser k (número de diagonais da matriz A)
+    int k_temp = 7; // Assumindo k=7 para Matriz A
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            printf("%5.1f ", A[i*n + j]);
+            // Use uma função para acessar o valor A[i][j] no formato DIA
+            printf("%5.1f ", getMatrizDIA(A, i, j, n));
         }
         printf("\n");
     }
 }
 
+// Imprime a matriz de coeficientes e o vetor B, mostrando apenas as 7 diagonais armazenadas.
+// A é a matriz no formato DIA (n x 7)
+void imprimeDiagonais(int n, real_t *A, real_t *B) {
+    printf("\n--- Matriz de Coeficientes no Formato DIA (%d Diagonais) ---\n", N_DIAG);
+    
+    // Imprime um cabeçalho para indicar quais diagonais estão sendo exibidas
+    printf("Diagonais (Offset j-i):\n");
+    printf(" [ -3 ] [ -2 ] [ -1 ] [ 0  ] [ +1 ] [ +2 ] [ +3 ] | Vetor B\n");
+    
+    // Itera sobre as linhas da matriz (i de 0 a n-1)
+    for (int i = 0; i < n; ++i) {
+        // Itera sobre as 7 colunas do formato DIA (diag_idx de 0 a 6)
+        for (int diag_idx = 0; diag_idx < N_DIAG; ++diag_idx) {
+            // O elemento é A[i][diag_idx], acessado em 1D como A[i * N_DIAG + diag_idx]
+            printf("%6.1f ", A[i * N_DIAG + diag_idx]);
+        }
+        // Imprime o elemento b[i] correspondente
+        printf(" | %6.1f\n", B[i]);
+    }
+}
 
-//função principal para gerar a Matriz A KDiagonal e o Vetor B.
+
+// Para: void criaKDiagonal(int n, int k, MatrizDIA A, real_t *B) {
+// ...
 void criaKDiagonal(int n, int k, real_t *A, real_t *B) {
     // d é o raio de diagonais
     // (k é o número total de diagonais, ímpar: k = 2d + 1)
     int d = (k - 1) / 2;
+    int diag_offset_center = d; // Índice da diagonal principal na matriz de armazenamento (d)
 
-    //preenche A
+    // preenche A no formato DIA (n x k)
+    // O código original aloca n*n, mas o loop preenche n*n.
+    // **Assumindo que A foi realocado para n*k em cgSolver.c**
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            //verifica se o elemento está dentro da banda diagonal: |i - j| <= d
-            if (abs(i - j) <= d) {
-                // Preenche com valor aleatório
-                A[i * n + j] = generateRandomA(i, j, k);
+            int offset = j - i;
+            // verifica se o elemento está dentro da banda diagonal: |i - j| <= d
+            if (abs(offset) <= d) {
+                int diag_idx = offset + diag_offset_center;
+                // Preenche com valor aleatório no formato DIA: A[i * k + diag_idx]
+                A[i * k + diag_idx] = generateRandomA(i, j, k);
             }
-            // Se estiver fora da banda, o elemento é zero
-            else {
-                A[i * n + j] = 0.0;
-            }
+            // Não precisa de 'else' pois a memória deve ser inicializada com zero 
+            // no cgSolver.c se n*k for alocado (ou inicializado com 0.0, mas 
+            // zeros não são armazenados na representação DIA. O código vai depender
+            // de inicialização com calloc e uso do loop acima).
         }
     }
     
@@ -74,41 +119,67 @@ void criaKDiagonal(int n, int k, real_t *A, real_t *B) {
     }
 }
 
-//função que transforma um sistema Ax=b em um sistema equivalente simétrico e positivo-definido (SPD)
-//método padrão para garantir que a matriz A' seja SPD, permitindo o uso do PCG.
+// sislin.c
+
+// Novo formato de A: MatrizDIA (n x k)
+// Novo formato de ASP: MatrizDIA (n x 7)
 void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_t *bsp, real_t *tempo)
 {
- *tempo = timestamp(); //inicia medição de tempo 
+    *tempo = timestamp();
 
-    // Calcula A' = A~T * A
+    // d_A é o raio de banda de A
+    int d_A = (k - 1) / 2;
+    int d_ASP = 3; // Raio de banda de ASP (assumindo 7 diagonais: (7-1)/2)
+    int k_ASP = N_DIAG; // 7
+    int offset_ASP = OFFSET_CENTER; // 3
+
+    // 1. Calcula A' = A~T * A
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            real_t soma = 0.0;
-            //cálculo do elemento (i, j) de AT A: (AT)_i * A_j
-            // A coluna 'i' de AT é a linha 'i' de A. A coluna 'j' de A é A_j.
-            // O código implementa o produto escalar da coluna 'i' de A pela coluna 'j' de A:
-            // (AT A)i,j = Σ_k A[k, i] * A[k, j]
-            for (int k2 = 0; k2 < n; ++k2) {
-                soma += A[k2 * n + i] * A[k2 * n + j];
+            // Apenas calcula e armazena se (i, j) está dentro da banda de ASP (7 diagonais)
+            if (abs(i - j) <= d_ASP) {
+                real_t soma = 0.0;
+                // (AT A)i,j = Σ_k A[k, i] * A[k, j]
+                // Os limites de k2 podem ser reduzidos (min/max), mas o loop completo funciona
+                for (int k2 = 0; k2 < n; ++k2) {
+                    // Substitua o acesso A[k2 * n + i] * A[k2 * n + j] 
+                    // por acessos via função DIA:
+                    real_t val_ki = getMatrizDIA(A, k2, i, n, k, d_A); // A[k2][i]
+                    real_t val_kj = getMatrizDIA(A, k2, j, n, k, d_A); // A[k2][j]
+                    soma += val_ki * val_kj;
+                }
+                // Armazenamento no formato DIA (n x 7)
+                int offset_diag = j - i;
+                int diag_idx = offset_diag + offset_ASP;
+                ASP[i * k_ASP + diag_idx] = soma;
             }
-            // Acesso direto, sem o ponteiro extra
-            ASP[i * n + j] = soma;
         }
     }
 
-    // Calcula b' = AT * b
+    // 2. Calcula b' = AT * b
     for (int i = 0; i < n; ++i) {
         real_t soma = 0.0;
-        // Cálculo do elemento 'i' de AT b: (AT)_i * b
-        // Produto escalar da coluna 'i' de A pelo vetor b: Σ_k A[k, i] * b[k]
+        // (AT b)i = Σ_k A[k, i] * b[k]
         for (int k2 = 0; k2 < n; ++k2) {
-            soma += A[k2 * n + i] * b[k2];
+            // Substitua o acesso A[k2 * n + i] * b[k2]
+            // por acesso DIA para A:
+            real_t val_ki = getMatrizDIA(A, k2, i, n, k, d_A); // A[k2][i]
+            soma += val_ki * b[k2];
         }
-        // Acesso direto
         bsp[i] = soma;
     }
 
-    *tempo = timestamp() - *tempo; //finaliza medição de tempo 
+    *tempo = timestamp() - *tempo;
+}
+
+// **Você precisará criar uma versão da getMatrizDIA que aceite k e d_A.**
+static inline real_t getMatrizDIA(const real_t *A, int i, int j, int n, int k, int d) {
+    int offset = j - i;
+    if (abs(offset) <= d) {
+        int diag_idx = offset + d; 
+        return A[i * k + diag_idx]; 
+    }
+    return 0.0;
 }
 
 //funç~es de pré-condicionamento

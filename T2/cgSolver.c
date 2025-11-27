@@ -6,7 +6,7 @@
 
 int main() {
     int n;          // dimensão do SL >10
-    int k;          // número de diagonais da matriz >1 e ímpar
+    int k = 7;          // número de diagonais da matriz >1 e ímpar
     double omega;   // pré-condicionador
     int maxit;      // número máx. de iterações
     double epsilon; // erro aprox. absoluto máximo
@@ -19,10 +19,10 @@ int main() {
     // ========== Leitura da entrada ==========
 
     //lê n, k, omega, maxit, epsilon da entrada padrão (STDIN)
-    int items_read = scanf("%d %d %lf %d %lf", &n, &k, &omega, &maxit, &epsilon);
+    int items_read = scanf("%d %lf %d %lf", &n, &omega, &maxit, &epsilon);
 
     //verifica se a leitura foi bem-sucedida
-    if (items_read < 5) {
+    if (items_read < 4) {
         printf("Erro: Não foi possível ler todos os 5 valores de entrada.\n");
         return 1;
     }
@@ -30,11 +30,6 @@ int main() {
     //validação dos parâmetros
     if (n <= 10) {
         printf("Erro: dimensão deve ser > 10\n");
-        return 1;
-    }
-
-    if (k <= 1 || k % 2 == 0) {
-        printf("Erro: número de diagonais inválido (deve ser ímpar > 1)\n");
         return 1;
     }
 
@@ -51,10 +46,10 @@ int main() {
 
     // ========== Geração do sistema ==========
     #ifdef DEBUG
-    //printf("Gerando sistema tridiagonal simétrico positivo...\n");
+    printf("Gerando sistema tridiagonal simétrico positivo...\n");
     #endif
 
-    real_t *A = calloc(n * n, sizeof(real_t)); //aloca matriz A inicializando com 0
+    real_t *A = calloc(n * 7, sizeof(real_t)); //aloca matriz A inicializando com 0
     real_t *b = calloc(n, sizeof(real_t)); //aloca vetor B inicializando com 0
     real_t *x = calloc(n, sizeof(real_t)); //aloca o vetor de solução x inicializando com 0 
     
@@ -70,10 +65,15 @@ int main() {
     //chama função que cria a matriz e o vetor B 
     criaKDiagonal(n, k, A, b);
 
-    #ifdef DEBUG
+    //#ifdef DEBUG
     imprimeSistema(n, A, b);
-    #endif
+    //#endif
 
+    //#ifdef DEBUG
+    imprimeDiagonais(n, A, b);
+    //#endif
+
+    /*
     real_t *ASP = calloc(n * n, sizeof(real_t));
     real_t *bsp = calloc(n, sizeof(real_t));
 
@@ -200,7 +200,7 @@ int main() {
     free(D);
     free(L);
     free(U);
-    if (M) free(M);
+    if (M) free(M); */
 
     return 0;
 }
