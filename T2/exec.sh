@@ -1,87 +1,128 @@
 #!/bin/bash
-# Script de teste para o projeto cgSolver
 
-# Nome do executável
-EXECUTABLE="cgSolver"
+# ==============================================================================
+# Script de Benchmark para o Trabalho 2 - HPC
+# Autores: Brenda Pinheiro Ricci & João Pedro Vieira Santos
+# ==============================================================================
 
-# Arquivo de entrada padrão para os testes
-INPUT_FILE="test_input.txt"
+# --- Configurações Iniciais ---
+EXECUTABLE="./cgSolver"
+RESULT_DIR="resultados"
+LIKWID_CMD="likwid-perfctr"
 
-# --- Funções Auxiliares ---
+# Parâmetros fixos do enunciado
+K=7
+MAXIT=25
+OMEGA=0.0
+EPSILON=1.0e-9
 
-# Função para compilar o projeto
-compile_project() {
-    echo " Compilando o projeto..."
-    # Limpa compilações anteriores (opcional, mas recomendado)
-    make clean > /dev/null 2>&1
-    # Compila o executável principal
-    make "$EXECUTABLE" 
-    if [ $? -ne 0 ]; then
-        echo " FALHA NA COMPILAÇÃO. Verifique o Makefile e os códigos-fonte."
-        exit 1
-    fi
-    echo " Compilação bem-sucedida."
-}
+# Tamanhos de N solicitados no enunciado
+SIZES=(32 64 128 256 512 1000 2000 4000 8000 9000 10000 20000)
 
-# Função para executar um caso de teste
-run_test() {
-    local n=$1
-    local k=$2
-    local omega=$3
-    local maxit=$4
-    local epsilon=$5
-    local test_name="Teste-n${n}-k${k}-w${omega}-m${maxit}-e${epsilon}"
+# Grupos do LIKWID a serem testados
+# Ajuste conforme a arquitetura (ex: MEM ou L3, L2CACHE ou CACHE)
+# Verifique disponibilidade com 'likwid-perfctr -a'
+GROUP_FLOPS="FLOPS_DP"
+GROUP_L2="L2CACHE" 
+GROUP_MEM="L3" # Ou "MEM" dependendo da arquitetura
+# Nota: FLOPS_AVX pode ser adicionado se disponível na arquitetura
 
-    echo ""
-    echo "=========================================================="
-    echo "Executando: $test_name"
-    echo "----------------------------------------------------------"
-    echo "$n $k $omega $maxit $epsilon" > "$INPUT_FILE"
+# --- Verificações ---
 
-    # Executa o programa, redirecionando o arquivo de entrada
-    # O tempo de execução é medido com o 'time' e a saída é salva em OUT_FILE
-    start_time=$(date +%s.%N)
-    ./"$EXECUTABLE" < "$INPUT_FILE" > "${test_name}.out" 2> "${test_name}.err"
-    end_time=$(date +%s.%N)
-    elapsed=$(echo "$end_time - $start_time" | bc)
+if ! command -v $LIKWID_CMD &> /dev/null; then
+    echo "ERRO: LIKWID não encontrado. Execute em uma máquina com LIKWID instalado."
+    exit 1
+fi
+
+# Cria diretórios para armazenar os logs brutos
+mkdir -p $RESULT_DIR/tempo
+mkdir -p $RESULT_DIR/flops
+mkdir -p $RESULT_DIR/l2
+mkdir -p $RESULT_DIR/mem
+
+# --- 1. Compilação ---
+echo "--- 1. Compilando (Flags de Otimização + LIKWID) ---"
+
+# Limpa anterior
+rm -f $EXECUTABLE
+
+# Compilação conforme enunciado: -O3 -march=native -mavx -fopt-info-vec
+# Adiciona -DLIKWID_PERFMON para ativar os marcadores no código C
+gcc -O3 -march=native -mavx -fopt-info-vec -DLIKWID_PERFMON \
+    -I/usr/local/include -L/usr/local/lib \
+    cgSolver.c sislin.c pcgc.c utils.c \
+    -o $EXECUTABLE -llikwid -lm
+
+if [ $? -ne 0 ]; then
+    echo "ERRO: Falha na compilação."
+    exit 1
+fi
+echo "Compilação SUCESSO."
+
+# --- 2. Execução dos Testes ---
+
+echo ""
+echo "--- 2. Iniciando Benchmarks ---"
+echo "Parâmetros: k=$K, maxit=$MAXIT, omega=$OMEGA"
+echo "Logs serão salvos em ./$RESULT_DIR/"
+
+for n in "${SIZES[@]}"; do
+    echo "========================================"
+    echo "Executando para N = $n"
     
-    RETURN_CODE=$?
+    # Prepara a entrada para o programa (stdin)
+    # Formato: N OMEGA MAXIT EPSILON
+    INPUT_STR="$n $OMEGA $MAXIT $EPSILON"
 
-    if [ $RETURN_CODE -eq 0 ]; then
-        echo "SUCESSO. Código de retorno: $RETURN_CODE"
-        echo "Tempo total de execução: ${elapsed}s"
-        # Você pode adicionar comandos para verificar a saída aqui (e.g., checar norma_residuo)
-        # Ex: grep "Norma do resíduo" "${test_name}.out"
-    else
-        echo "FALHA. Código de retorno: $RETURN_CODE"
-        echo "Verifique o arquivo de erro: ${test_name}.err"
-    fi
-}
+    # ---------------------------------------------------------
+    # A. Tempo de Execução (Medido internamente pelo utils.h)
+    # Executamos sem overhead do likwid (apenas wrapper básico se necessário)
+    # ---------------------------------------------------------
+    echo "  [1/4] Medindo Tempo..."
+    # O comando 'echo' alimenta o stdin do executável
+    echo "$INPUT_STR" | $EXECUTABLE > "$RESULT_DIR/tempo/N_${n}.log"
 
-# --- Main ---
+    # ---------------------------------------------------------
+    # B. Operações Aritméticas (FLOPS_DP)
+    # ---------------------------------------------------------
+    echo "  [2/4] Medindo FLOPS ($GROUP_FLOPS)..."
+    echo "$INPUT_STR" | $LIKWID_CMD -C 0 -g $GROUP_FLOPS -m $EXECUTABLE > "$RESULT_DIR/flops/N_${n}.log" 2>&1
 
-# 1. Compilação
-compile_project
+    # ---------------------------------------------------------
+    # C. Cache Miss L2
+    # ---------------------------------------------------------
+    echo "  [3/4] Medindo Cache L2 ($GROUP_L2)..."
+    echo "$INPUT_STR" | $LIKWID_CMD -C 0 -g $GROUP_L2 -m $EXECUTABLE > "$RESULT_DIR/l2/N_${n}.log" 2>&1
 
-# 2. Casos de Teste
-echo ""
-echo "--- Iniciando Testes de Execução ---"
+    # ---------------------------------------------------------
+    # D. Banda de Memória
+    # ---------------------------------------------------------
+    echo "  [4/4] Medindo Memória ($GROUP_MEM)..."
+    echo "$INPUT_STR" | $LIKWID_CMD -C 0 -g $GROUP_MEM -m $EXECUTABLE > "$RESULT_DIR/mem/N_${n}.log" 2>&1
 
-# Caso 1: Teste pequeno (Jacobi Precondicionado)
-run_test 20 0.0 500 1e-6 
+done
 
-# Caso 2: Teste médio (Sem Precondicionador) - O código tem um EXIT no geraPreCond para -1.0, então usaremos um valor implementado, como 0.0
-# Se o seu 'geraPreCond' for modificado para suportar w=-1.0, use o valor -1.0 aqui.
-# Como o código atual força 'exit(1)' para w != -1.0 E w != 0.0, usaremos um teste funcional com w=0.0
-run_test 100 0.0 1000 1e-8
-
-# Caso 3: Teste maior, com mais diagonais e mais iterações
-run_test 500 0.0 2000 1e-7
-
-# 3. Limpeza (opcional)
-# rm -f "$INPUT_FILE"
+# --- 3. Consolidação (Exemplo Simples) ---
 
 echo ""
-echo "=========================================================="
-echo "✨ Testes concluídos ✨ Verifique os arquivos *.out para detalhes."
-echo "=========================================================="
+echo "--- 3. Resumo da Execução ---"
+echo "Todos os testes concluídos."
+echo "Para gerar os gráficos, extraia os dados dos arquivos em $RESULT_DIR/."
+echo ""
+echo "Exemplo de extração rápida de TEMPO (op1 - Iteração):"
+echo "N | Tempo Iteração (s)"
+echo "--|-------------------"
+for n in "${SIZES[@]}"; do
+    # O script assume que o tempo da iteração é a PENÚLTIMA linha numérica impressa pelo seu código main
+    # Formato do seu printf final:
+    # ...
+    # tPrecond
+    # tempoIter  <-- Pegamos este
+    # tResiduo
+    
+    TIME_VAL=$(grep -v "Nao calculado" "$RESULT_DIR/tempo/N_${n}.log" | tail -n 2 | head -n 1)
+    echo "$n | $TIME_VAL"
+done
+
+echo ""
+echo "Script finalizado."

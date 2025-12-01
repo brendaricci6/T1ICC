@@ -1,24 +1,54 @@
-Autoria
--------
-Brenda Pinheiro Ricci - GRR20214329
-João Pedro Vieira Santos - GRR20215518
+# Autoria
 
-Objetivo
---------
-Resolver Sistemas Lineares (SLs) usando Gradiente Conjugado Pré-Condicionado (PCG)
-O sistema k-diagonal (A, b) é transformado em SPD (A' = A^T A, b' = A^Tb) para garantir convergência
+* **Brenda Pinheiro Ricci** - GRR20214329
+* **João Pedro Vieira Santos** - GRR20215518
 
-Estruturas de Dados
-------------------
-- Matrizes alocadas com 1 dimensão, para acessar as posições usamos A[i*n+j]
-- Vetores: b, x, M, D, L, U
+# Objetivo
 
-Módulos
--------
-sislin: alocação e liberação de memória, geração de matrizes k-diagonais (criaKDiagonal), transformação SPD (genSimetricaPositiva), pré-condicionamento (geraDLU, geraPreCond), cálculo de resíduo (calcResiduoSL)
+O objetivo deste trabalho é resolver **Sistemas Lineares (SLs)** usando o método do **Gradiente Conjugado Pré-Condicionado (PCG)**.
 
-pcgc: implementação do PCG (conjugateGradient)
+Como o método exige que a matriz seja simétrica e positiva definida, nós transformamos o sistema original k-diagonal ($A, b$) em um novo sistema ($A' = A^T A$, $b' = A^T b$) que atende a esses requisitos.
 
-cgSolver.c: função main do projeto. Responsável pela leitura de parâmetros, geração do SL, transformação SPD, pré-condicionamento, resolução PCG, cálculo do resíduo, impressão de resultados e liberação de memória
+# Estruturas de Dados
 
+A grande estratégia desta versão (**v2**) para ganhar desempenho foi mudar a forma como a matriz é armazenada na memória.
 
+### Como era antes (v1):
+Guardávamos a matriz pensando **"linha por linha"**.
+* **O problema:** Para realizar os cálculos, precisávamos acessar elementos das diagonais vizinhas. Na memória do computador, esses dados ficavam fisicamente distantes uns dos outros. Isso fazia o processador perder tempo buscando dados longe (gerando muitos *Cache Misses*).
+
+### Como ficou agora (v2):
+Agora guardamos a matriz **por diagonais**.
+* **A estratégia:** Imagine que "esticamos" cada diagonal da matriz e a transformamos em um vetor contínuo.
+* **A vantagem:** Agora, os dados que precisamos multiplicar estão vizinhos na memória física. O processador lê um bloco de memória e já aproveita todos os dados.
+* **Acesso no código:** `A[indice_da_diagonal * n + linha]`
+
+# Módulos
+
+* `sislin`:
+    * Responsável pela alocação de memória.
+    * `criaKDiagonal`: Gera a matriz já no formato otimizado (vetores de diagonais).
+    * `genSimetricaPositiva`: Realiza a transformação SPD respeitando a nova estrutura de dados.
+    * `calcResiduoSL`: Calcula o erro (**op2**) utilizando a otimização de diagonais.
+
+* `pcgc`:
+    * `gradienteConjugado`: O núcleo do algoritmo. Contém o loop principal (**op1**) totalmente otimizado.
+
+* `cgSolver.c`:
+    * Função `main`. Lê os parâmetros, invoca as funções, mede o tempo com a biblioteca **LIKWID** e exibe os resultados.
+
+# Explicando o Desempenho
+
+Para atingir a meta de desempenho do Trabalho 2, implementamos duas mudanças fundamentais nas partes críticas do código (`op1` - iteração do solver, e `op2` - cálculo do resíduo):
+
+## 1. Mudança de Memória
+* **A Ideia:** Processadores leem a memória em blocos chamados *Cache Lines*. Se a matriz estiver organizada linha por linha, ao buscar o vizinho de cima ou de baixo, o processador precisa pular para endereços de memória distantes.
+* **A Solução:** Ao armazenar por **diagonais contíguas**, quando o processador carrega um trecho da diagonal, ele traz vários números que serão processados em sequência. É comparável a ler um livro de forma contínua em vez de pular páginas aleatoriamente.
+* **Ganho:** Redução de *Cache Misses* (L1/L2) e aumento da banda de memória efetiva.
+
+## 2. Inversão de Loops e Vetorização (AVX)
+* **O Problema dos IFs:** No código original, dentro do loop principal, era necessário verificar constantemente se estávamos na borda da matriz ou se o índice `j` era válido. Esses `if`s prejudicam o desempenho pois quebram o *pipeline* do processador.
+* **A Solução:** Invertemos a lógica. Em vez de percorrer a linha e procurar as diagonais, percorremos a **diagonal inteira** de uma vez.
+    * Calculamos *antes* do loop onde a diagonal começa e termina.
+    * O loop torna-se "limpo", contendo apenas operações aritméticas: `soma += A[i] * x[i]`.
+* **O Ganho (AVX):** Com o loop simplificado e os dados contíguos, o compilador (GCC) consegue aplicar instruções **AVX**. Isso permite realizar **4 multiplicações simultaneamente** em cada ciclo do processador, aumentando exponencialmente o número de **FLOPS**.

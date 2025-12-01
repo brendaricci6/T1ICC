@@ -1,36 +1,41 @@
 #ifndef __SISLIN_H__
 #define __SISLIN_H__
 
-// Definições para o formato de Armazenamento por Diagonais (DIA) da matriz ASP
-#define N_DIAG 7        // Número de diagonais armazenadas (para ASP)
-#define OFFSET_CENTER 3 // Índice da diagonal principal (7-1)/2
-
-typedef double * MatrizDIA;
-#define N_DIAG 7 // O número total de diagonais (2d + 1)
-#define OFFSET_CENTER 3 // O índice da diagonal principal (7-1)/2
-
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <math.h>
-
 #include "utils.h"
 
-//funções criadas 
-// int alocaKDiagonal(int n, real_t ***matriz);
-// int alocaVetorB(int n, real_t **vetorA);
-static inline real_t getMatrizDIA(const real_t *A, int i, int j, int n);
-void liberaKDiagonal(int n, real_t **matriz); 
-void liberaVetorB(real_t *vetorB);
+// Configuração do LIKWID (obrigatório pelo enunciado)
+#ifdef LIKWID_PERFMON
+#include <likwid.h>
+#else
+#define LIKWID_MARKER_INIT
+#define LIKWID_MARKER_THREADINIT
+#define LIKWID_MARKER_SWITCH
+#define LIKWID_MARKER_REGISTER(regionTag)
+#define LIKWID_MARKER_START(regionTag)
+#define LIKWID_MARKER_STOP(regionTag)
+#define LIKWID_MARKER_CLOSE
+#define LIKWID_MARKER_GET(regionTag, nevents, events, time, count)
+#endif
+
+// Definições do Sistema
+#define N_DIAG 7        // Total de diagonais
+#define OFFSET_CENTER 3 // Onde fica a diagonal principal (índice 3)
+
+typedef double real_t;
+typedef double rtime_t;
+
+// Funções do Sislin
+void criaKDiagonal(int n, int k, real_t *A, real_t *b);
+void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_t *bsp, rtime_t *tempo);
+void geraDLU(real_t *A, int n, int k, real_t *D, real_t *L, real_t *U, rtime_t *tempo, double eps);
+void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k, real_t *M, rtime_t *tempo, double eps);
+
+// OP2: Cálculo do Resíduo
+real_t calcResiduoSL(real_t *A, real_t *b, real_t *X, int n, int k, rtime_t *tempo);
+
+// Debug
 void imprimeSistema(int n, real_t *A, real_t *B);
 void imprimeDiagonais(int n, real_t *A, real_t *B);
-void criaKDiagonal(int n, int k, real_t *A, real_t *B);
 
-void genSimetricaPositiva(real_t *A, real_t *b, int n, int k, real_t *ASP, real_t *bsp, real_t *tempo);
-void geraDLU (real_t *A, int n, int k, real_t *D, real_t *L, real_t *U, real_t *tempo, double eps);
-void geraPreCond(real_t *D, real_t *L, real_t *U, real_t w, int n, int k, real_t *M, real_t *tempo, double eps);
-real_t calcResiduoSL (real_t *A, real_t *b, real_t *X, int n, int k, real_t *tempo);
-
-
-#endif // __SISLIN_H__
-
+#endif
