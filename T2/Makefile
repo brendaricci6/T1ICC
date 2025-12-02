@@ -9,7 +9,7 @@ CFLAGS = -O3 -march=native -mavx -fopt-info-vec -Wall
 
 # Configurações do LIKWID
 # Ajuste o caminho base (LIKWID_HOME) se necessário (ex: /usr)
-LIKWID_HOME = /usr/local
+LIKWID_HOME = /home/soft/likwid
 LIKWID_FLAGS = -DLIKWID_PERFMON -I$(LIKWID_HOME)/include
 LIKWID_LIBS = -L$(LIKWID_HOME)/lib -llikwid
 

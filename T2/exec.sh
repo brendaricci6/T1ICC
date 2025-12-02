@@ -48,10 +48,7 @@ rm -f $EXECUTABLE
 
 # Compilação conforme enunciado: -O3 -march=native -mavx -fopt-info-vec
 # Adiciona -DLIKWID_PERFMON para ativar os marcadores no código C
-gcc -O3 -march=native -mavx -fopt-info-vec -DLIKWID_PERFMON \
-    -I/usr/local/include -L/usr/local/lib \
-    cgSolver.c sislin.c pcgc.c utils.c \
-    -o $EXECUTABLE -llikwid -lm
+make
 
 if [ $? -ne 0 ]; then
     echo "ERRO: Falha na compilação."
