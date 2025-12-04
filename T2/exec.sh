@@ -6,8 +6,8 @@
 # ==============================================================================
 
 # --- Configurações Iniciais ---
-EXECUTABLE="./cgSolver"
-RESULT_DIR="resultados"
+EXECUTABLE="./cgSolverOld"
+RESULT_DIR="resultadosT1"
 LIKWID_CMD="likwid-perfctr"
 
 # Parâmetros fixos do enunciado

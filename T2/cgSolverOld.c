@@ -5,6 +5,8 @@
 #include <stdlib.h>
 
 int main() {
+    // Inicializa LIKWID se definido
+    LIKWID_MARKER_INIT;
     int n;          // dimensão do SL >10
     int k = 7;          // número de diagonais da matriz >1 e ímpar
     double omega;   // pré-condicionador
@@ -210,5 +212,7 @@ int main() {
     free(U);
     if (M) free(M); 
 
+    LIKWID_MARKER_CLOSE;
+    
     return 0;
 }
