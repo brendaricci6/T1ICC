@@ -8,7 +8,7 @@
 # --- Configurações Iniciais ---
 EXECUTABLE="./cgSolver"
 RESULT_DIR="resultadosT1"
-LIKWID_CMD="likwid-perfctr"
+LIKWID_CMD="/home/soft/likwid/bin/likwid-perfctr"
 
 # Parâmetros fixos do enunciado
 K=7              # Número de diagonais (Sempre 7 conforme solicitado)

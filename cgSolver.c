@@ -2,6 +2,7 @@
 #include "pcgc.h" //funções específicas do método PCG
 #include "utils.h"
 #include <stdio.h>
+#include "likwid.h"
 #include <stdlib.h>
 
 int main() {

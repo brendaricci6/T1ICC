@@ -1,8 +1,9 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include "utils.h"
-
+#include <likwid.h>
 //Função Gradientes Conjugados Pré-condicionados (Jacobi)
 //A: Matriz do sistema
 //b: Vetor do lado direito

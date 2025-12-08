@@ -8,7 +8,8 @@ CFLAGS = -O3 -march=native -mavx -fopt-info-vec -Wall
 # VERIFIQUE SE O CAMINHO ESTÁ CERTO NA SUA MÁQUINA
 LIKWID_HOME = /home/soft/likwid
 LIKWID_FLAGS = -DLIKWID_PERFMON -I$(LIKWID_HOME)/include
-LIKWID_LIBS = -L$(LIKWID_HOME)/lib -llikwid
+# O -Wl,-rpath avisa o executável para "gravar" esse caminho dentro dele mesmo
+LIKWID_LIBS = -L$(LIKWID_HOME)/lib -llikwid -Wl,-rpath=$(LIKWID_HOME)/lib
 
 # Bibliotecas de Linkagem (Math + Likwid)
 LFLAGS = -lm $(LIKWID_LIBS)
