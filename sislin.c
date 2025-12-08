@@ -200,10 +200,13 @@ real_t calcResiduoSL (real_t *A, real_t *b, real_t *X,
 		      int n, int k, rtime_t *tempo)
 {
     rtime_t t0 = timestamp(); // Inicia a medição de tempo
+    
+    LIKWID_MARKER_START("op2");
 
     real_t *r = malloc(n * sizeof(real_t));
     if (!r) {
         printf("Erro de alocação no cálculo do resíduo.\n");
+        LIKWID_MARKER_STOP("op2");
         return -1;
     }
 
@@ -222,6 +225,8 @@ real_t calcResiduoSL (real_t *A, real_t *b, real_t *X,
         soma += r[i] * r[i];
     }
     real_t norma = sqrt(soma);
+
+    LIKWID_MARKER_STOP("op2");
 
     free(r);
     *tempo = timestamp() - t0;

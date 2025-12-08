@@ -127,6 +127,7 @@ int main() {
         if (!M) {
             printf("Erro de alocacao M\n");
             free(A); free(b); free(x); free(D); free(L); free(U);
+            LIKWID_MARKER_CLOSE;
             return 1;
         }
         geraPreCond(D, L, U, omega, n, k, M, &tPrecond, epsilon);

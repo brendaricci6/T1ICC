@@ -57,6 +57,9 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
     // ============== Loop principal ==============
     int iter;
     *tempoIter = timestamp();
+
+    LIKWID_MARKER_START("op1");
+
     for (iter = 1; iter <= maxit; iter++) {
         // Ap = A * p
         //Multiplicação da matriz A pelo vetor de direção de busca p
@@ -97,6 +100,9 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         *normaFinal = norma_r;
 
         if (norma_r < eps) {
+
+            LIKWID_MARKER_STOP("op1");
+            
             // atribui valor do erro 
             // calcula tempo medio das iteracoes ate agora
             *tempoIter = timestamp() - *tempoIter;
@@ -130,6 +136,9 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         for (int i = 0; i < n; i++)
             p[i] = z[i] + beta * p[i];
     }
+
+    LIKWID_MARKER_STOP("op1");
+
     // calcula tempo medio das iteracoes ate agora
     *tempoIter = timestamp() - *tempoIter;
     *tempoIter = *tempoIter / iter;
