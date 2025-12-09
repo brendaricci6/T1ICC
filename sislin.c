@@ -1,18 +1,18 @@
 #include <stdio.h>
-#include <stdlib.h>    /* for exit e random/srandom */
+#include <stdlib.h>    
 #include <string.h>
 #include <math.h>
 
 #include "utils.h"
 #include "sislin.h"
 
-//Funções Auxiliares de geração de coeficiente aleatórios
+//funções Auxiliares de geração de coeficiente aleatórios
 
 static inline real_t generateRandomA( unsigned int i, unsigned int j, unsigned int k );
 static inline real_t generateRandomB( unsigned int k );
 
 /**
- * Função que gera os coeficientes de um sistema linear k-diagonal
+ * função que gera os coeficientes de um sistema linear k-diagonal
  * @param i,j coordenadas do elemento a ser calculado (0<=i,j<n)
  * @param k numero de diagonais da matriz A
  */

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 int main() {
-    // Inicializa LIKWID se definido
+    //inicializa LIKIWD se definido
     LIKWID_MARKER_INIT;
 
     int n;          // dimensão do SL >10
@@ -19,7 +19,7 @@ int main() {
     //variáveis para armazenar normas
     real_t normaFinal = 0.0, norma_residuo = 0.0;
 
-    // ========== Leitura da entrada ==========
+    // ========== Leitura da entrada ============
 
     //lê n, k, omega, maxit, epsilon da entrada padrão (STDIN)
     int items_read = scanf("%d %lf %d %lf", &n, &omega, &maxit, &epsilon);
@@ -36,7 +36,7 @@ int main() {
         return 1;
     }
 
-    // ========== Geração do sistema ==========
+    // =========== Geração do sistema ==========
     
     // Aloca matriz A inicializando com 0 (Layout V2: n*k)
     real_t *A = calloc(n * k, sizeof(real_t)); 
@@ -64,7 +64,7 @@ int main() {
     //calcula o tempo gasto 
     tGen = timestamp() - tGen;
 
-    // ========== Decomposição DLU ==========
+    // ========== Decomposição DLU ===========
 
     real_t *D = malloc(n * sizeof(real_t));
     real_t *L = malloc(n * sizeof(real_t));
@@ -75,7 +75,7 @@ int main() {
     //armazena o tempo em tDLU
     geraDLU(ASP, n, k, D, L, U, &tDLU, epsilon);
 
-    // ========== Geração do pré-condicionador ==========
+    // ========== Geração do pré condicionador ===========
     
     //aloca vetor M que armazena o pré-condicionados
     real_t *M;
@@ -93,7 +93,7 @@ int main() {
         M = NULL;
     }
 
-    // ========== Execução do método PCG ==========
+    // ========== Execução do método PCG ===========
     
     //iterações 
     int iter = 0;
@@ -102,12 +102,12 @@ int main() {
     //executa o pcg 
     iter = gradienteConjugado(ASP, bsp, x, n, maxit, epsilon, M, &normaFinal, &tempoIter);
     
-    // ========== Cálculo do resíduo ==========
+    // =========== Clculo do resíduo ==========
 
     //calcula a norma resíduo com os valores de A e x obtidos 
     norma_residuo = calcResiduoSL(A, b, x, n, k, &tResiduo);
     
-    // ========== Impressão dos resultados ==========
+    // ========== Impressão dos resultados ===========
     printf("%d\n", n);
     for (int i = 0; i < n; ++i)
         printf("%.16g ", x[i]);
@@ -120,7 +120,7 @@ int main() {
     printf("%.8g\n", tResiduo);
     // printf("Iterações: %d\n", iter);
 
-    // ========== Libera memória ==========
+    // ============Libera memória ==========
     free(A);
     free(b);
     free(x);

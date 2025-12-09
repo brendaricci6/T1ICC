@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 int main() {
-    // Inicializa LIKWID se definido
+    //inicializa LIKIWD se definido
     LIKWID_MARKER_INIT;
 
     int n;          // dimensão do SL >10
@@ -19,7 +19,7 @@ int main() {
     //variáveis para armazenar normas
     real_t normaFinal = 0.0, norma_residuo = 0.0;
 
-    // ========== Leitura da entrada ==========
+    // ========= Leitura da entrada ==========
 
     //lê n, k, omega, maxit, epsilon da entrada padrão (STDIN)
     int items_read = scanf("%d %d %lf %d %lf", &n, &k, &omega, &maxit, &epsilon);
@@ -52,7 +52,7 @@ int main() {
     printf("==========-\n");
     #endif
 
-    // ========== Geração do sistema ==========
+    // ========== Geração do sistema ============
     #ifdef DEBUG
     //printf("Gerando sistema tridiagonal simétrico positivo...\n");
     #endif
@@ -116,7 +116,7 @@ int main() {
         printf(" %6e", L[i]);
     printf("\n");
     #endif
-    // ========== Geração do pré-condicionador ==========
+    // ========== Geraçao do pré-condicionador ==============
     
     //aloca vetor M que armazena o pré-condicionados
     real_t *M;
@@ -173,7 +173,7 @@ int main() {
     #endif
 
 
-    // ========== Cálculo do resíduo ==========
+    // ========== Cálculo do residuo ==========
 
     //calcula a norma resíduo com os valores de A e x obtidos 
     #ifdef DEBUG
@@ -184,7 +184,7 @@ int main() {
     printf("Norma do resíduo calculada em %.6es: %.6e\n", tResiduo, norma_residuo);
     #endif
     
-    // ========== Impressão dos resultados ==========
+    // =========== Impressao dos resultados ==========
     printf("%d\n", n);
     for (int i = 0; i < n; ++i)
         printf("%.16g ", x[i]);
@@ -197,7 +197,7 @@ int main() {
     printf("%.8g\n", tResiduo);
     // printf("Iterações: %d\n", iter);
 
-    // ========== Libera memória ==========
+    // ========== Libera memória ===========
     free(A);
     free(b);
     free(x);

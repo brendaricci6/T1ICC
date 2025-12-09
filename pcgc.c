@@ -15,7 +15,7 @@
 // normaFinal: Ponteiro para armazenar a norma do resíduo final
 int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double eps, real_t *M, real_t *normaFinal, rtime_t *tempoIter)
 {
-    // Alocação dos vetores auxiliares
+    //alocação dos vetores auxiliares
     real_t *r = malloc(n * sizeof(real_t));  // resíduo
     real_t *z = malloc(n * sizeof(real_t));  // resíduo pré-condicionado
     real_t *p = malloc(n * sizeof(real_t));  // direção de busca
@@ -27,7 +27,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         return -1; //retorna o erro
     }
     
-    // Passo 1: calcular o resíduo inicial r = b - A*x
+    //calcular o resíduo inicial r = b - A*x
     for (int i = 0; i < n; i++) {
         real_t soma = 0.0;
         //multiplicação da linha i de A pelo vetor x
@@ -36,7 +36,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
         r[i] = b[i] - soma;
     }
 
-    // Passo 2: aplicar pré-condicionador M (Jacobi)
+    //aplicar pré-condicionador M (Jacobi
     //o pré-condicionador é aplicado para obter o resídulo pré-condicionado 'z'
     //M é a diagonal de A
     for (int i = 0; i < n; i++) {
@@ -46,16 +46,16 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
             z[i] = r[i]; // sem pré-condicionador
     }
 
-    // Passo 3: inicializar direção de busca p = z
+    // inicializar direção de busca p = z
     for (int i = 0; i < n; i++)
         p[i] = z[i];
 
-    // Produto escalar inicial (rᵗz)
+    // produto escalar inicial (r^t z)
     real_t rz_old = 0.0;
     for (int i = 0; i < n; i++)
         rz_old += r[i] * z[i];
 
-    // ============== Loop principal ==============
+    // ============= Loop principal ==============
     int iter;
     *tempoIter = timestamp();
 
@@ -124,7 +124,7 @@ int gradienteConjugado(real_t *A, real_t *b, real_t *x, int n, int maxit, double
                 z[i] = r[i];
         }
 
-        // Calcular o fator beta (Gram-Schmidt)
+        //Calcula o fator beta (Gram Schmdt)
         // beta = ((r^T)z novo) / ((r~T)z antigo)
         real_t rz_new = 0.0;
         for (int i = 0; i < n; i++)

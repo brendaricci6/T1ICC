@@ -5,13 +5,6 @@
 #include "utils.h"
 
 /*  Retorna tempo em milisegundos desde EPOCH
-
-    Forma de uso:
- 
-    double tempo;
-    tempo = timestamp();
-    <trecho de programa do qual se deseja medir tempo>
-    tempo = timestamp() - tempo;
 */
 
 rtime_t timestamp (void)
@@ -22,9 +15,6 @@ rtime_t timestamp (void)
 }
 
 /* Gera string '<baseName>_n'
- * Por exemplo, se baseName = "ABC" e n = 10,
- *  Função retorna a string "ABC_10"
- * Útil para gerar marcadores para LIKWID
  */
 string_t markerName(string_t baseName, int n)
 {
