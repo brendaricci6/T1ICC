@@ -171,7 +171,3 @@ real_t calcResiduoSL (real_t *A, real_t *b, real_t *X, int n, int k, rtime_t *te
     *tempo = timestamp() - t0;
     return norma;
 }
-
-// Funções de debug vazias
-void imprimeSistema(int n, real_t *A, real_t *B) { }
-void imprimeDiagonais(int n, real_t *A, real_t *B) { }
